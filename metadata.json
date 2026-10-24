@@ -1,0 +1,7 @@
+{
+  "name": "Snowbound Hearts - 3D Isometric Snow Plowing",
+  "description": "A romantic 3D isometric snow-plowing game with cozy upgrades, combo multipliers, and procedural synth soundscapes.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+

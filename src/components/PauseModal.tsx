@@ -3,12 +3,14 @@
  */
 
 import React from 'react';
-import { Play, RotateCcw, Volume2, VolumeX, Wrench } from 'lucide-react';
+import { BookOpen, Play, RotateCcw, Settings, Volume2, VolumeX, Wrench } from 'lucide-react';
 
 interface PauseModalProps {
   onResume: () => void;
   onRestart: () => void;
   onOpenWorkshop: () => void;
+  onOpenScrapbook: () => void;
+  onOpenSettings: () => void;
   isMuted: boolean;
   onToggleMute: () => void;
   isMusicEnabled: boolean;
@@ -19,6 +21,8 @@ export const PauseModal: React.FC<PauseModalProps> = ({
   onResume,
   onRestart,
   onOpenWorkshop,
+  onOpenScrapbook,
+  onOpenSettings,
   isMuted,
   onToggleMute,
   isMusicEnabled,
@@ -48,6 +52,22 @@ export const PauseModal: React.FC<PauseModalProps> = ({
           >
             <Wrench className="w-4 h-4 text-amber-400" />
             <span>Solstice Workshop & Upgrades (G)</span>
+          </button>
+
+          <button
+            onClick={onOpenScrapbook}
+            className="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium flex items-center justify-center gap-2 border border-slate-700 transition-colors cursor-pointer"
+          >
+            <BookOpen className="w-4 h-4 text-rose-400" />
+            <span>Solstice Scrapbook & Heart Log (L)</span>
+          </button>
+
+          <button
+            onClick={onOpenSettings}
+            className="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium flex items-center justify-center gap-2 border border-slate-700 transition-colors cursor-pointer"
+          >
+            <Settings className="w-4 h-4 text-purple-400" />
+            <span>Sound & Minimap Settings</span>
           </button>
 
           <button

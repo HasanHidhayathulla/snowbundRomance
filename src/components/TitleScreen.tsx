@@ -5,16 +5,24 @@
  */
 
 import React from 'react';
-import { Heart, Sparkles, Volume2, VolumeX } from 'lucide-react';
+import { BookOpen, Heart, Settings, Sparkles, Volume2, VolumeX } from 'lucide-react';
 import { synthAudio } from '../audio/synthAudio';
 
 interface TitleScreenProps {
   onStart: () => void;
   isMuted: boolean;
   onToggleMute: () => void;
+  onOpenScrapbook: () => void;
+  onOpenSettings: () => void;
 }
 
-export const TitleScreen: React.FC<TitleScreenProps> = ({ onStart, isMuted, onToggleMute }) => {
+export const TitleScreen: React.FC<TitleScreenProps> = ({
+  onStart,
+  isMuted,
+  onToggleMute,
+  onOpenScrapbook,
+  onOpenSettings,
+}) => {
   return (
     <div className="absolute inset-0 flex flex-col justify-between items-center p-8 pointer-events-auto bg-slate-950/40 select-none">
       {/* Top Bar with cozy badge and mute */}
@@ -24,16 +32,34 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({ onStart, isMuted, onTo
           <span>VALENTINE VALLEY · WINTER SOLSTICE</span>
         </div>
 
-        <button
-          onClick={() => {
-            synthAudio.init();
-            onToggleMute();
-          }}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-slate-900/80 border border-slate-700/60 hover:bg-slate-800 text-xs text-slate-300 transition-colors cursor-pointer"
-        >
-          {isMuted ? <VolumeX className="w-4 h-4 text-rose-400" /> : <Volume2 className="w-4 h-4 text-emerald-400" />}
-          <span>{isMuted ? 'Sound Off' : 'Synth Audio On'}</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onOpenScrapbook}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-slate-900/80 border border-slate-700/60 hover:bg-slate-800 text-xs text-rose-300 transition-colors cursor-pointer"
+          >
+            <BookOpen className="w-3.5 h-3.5 text-rose-400" />
+            <span>Scrapbook</span>
+          </button>
+
+          <button
+            onClick={onOpenSettings}
+            className="p-1.5 rounded-md bg-slate-900/80 border border-slate-700/60 hover:bg-slate-800 text-slate-300 transition-colors cursor-pointer"
+            title="Preferences"
+          >
+            <Settings className="w-4 h-4" />
+          </button>
+
+          <button
+            onClick={() => {
+              synthAudio.init();
+              onToggleMute();
+            }}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-slate-900/80 border border-slate-700/60 hover:bg-slate-800 text-xs text-slate-300 transition-colors cursor-pointer"
+          >
+            {isMuted ? <VolumeX className="w-4 h-4 text-rose-400" /> : <Volume2 className="w-4 h-4 text-emerald-400" />}
+            <span>{isMuted ? 'Sound Off' : 'Synth Audio On'}</span>
+          </button>
+        </div>
       </div>
 
       {/* Hero Centerpiece: Bespoke SVG Title Lockup */}

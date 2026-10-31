@@ -7,18 +7,30 @@ import React, { useEffect, useRef, useState } from 'react';
 import { synthAudio } from './audio/synthAudio';
 import { GameHUD } from './components/GameHUD';
 import { PauseModal } from './components/PauseModal';
+import { ScrapbookModal } from './components/ScrapbookModal';
+import { SettingsModal } from './components/SettingsModal';
 import { ShopModal } from './components/ShopModal';
 import { TitleScreen } from './components/TitleScreen';
 import { VictoryModal } from './components/VictoryModal';
+import { LANDMARKS, ROMANTIC_GIFTS } from './game/constants';
 import { SnowPlowGameEngine, type GameHUDStats } from './game/engine';
+import {
+  clearGameData,
+  loadGameProgress,
+  loadGameSettings,
+  saveGameProgress,
+  saveGameSettings,
+  type GameSettings,
+} from './game/storage';
 
 export default function App() {
   const canvasMountRef = useRef<HTMLDivElement>(null);
   const engineRef = useRef<SnowPlowGameEngine | null>(null);
 
-  // Audio settings state
-  const [isMuted, setIsMuted] = useState(false);
+  // Settings & Audio state
+  const [settings, setSettings] = useState<GameSettings>(() => loadGameSettings());
   const [isMusicEnabled, setIsMusicEnabled] = useState(true);
+  const [highestCombo, setHighestCombo] = useState<number>(() => loadGameProgress().highestCombo || 1);
 
   // HUD stats mirrored for React rendering
   const [stats, setStats] = useState<GameHUDStats>({
@@ -36,6 +48,11 @@ export default function App() {
     giftsFound: 0,
     totalGifts: 6,
     lastEventMessage: null,
+    playerX: 0,
+    playerZ: 0,
+    heading: Math.PI,
+    landmarks: LANDMARKS.map((l) => ({ ...l, cleared: false })),
+    gifts: ROMANTIC_GIFTS.map((g) => ({ ...g, collected: false, revealed: false })),
     upgrades: {
       bladeWidth: 1,
       thermalLantern: 1,
@@ -51,6 +68,10 @@ export default function App() {
     // Initialize 3D Engine once inside isolated container
     const engine = new SnowPlowGameEngine(canvasMountRef.current, (newStats) => {
       setStats(newStats);
+      if (newStats.comboMultiplier > highestCombo) {
+        setHighestCombo(newStats.comboMultiplier);
+        saveGameProgress({ highestCombo: newStats.comboMultiplier });
+      }
     });
     engineRef.current = engine;
 
@@ -66,9 +87,27 @@ export default function App() {
     }
   };
 
+  // Apply loaded audio settings on mount
+  useEffect(() => {
+    synthAudio.setMasterVolume(settings.masterVolume);
+    synthAudio.setMusicVolume(settings.musicVolume);
+    synthAudio.setSfxVolume(settings.sfxVolume);
+    synthAudio.setMute(settings.isMuted);
+  }, []);
+
+  const handleUpdateSettings = (newVals: Partial<GameSettings>) => {
+    const updated = saveGameSettings(newVals);
+    setSettings(updated);
+
+    if (newVals.masterVolume !== undefined) synthAudio.setMasterVolume(newVals.masterVolume);
+    if (newVals.musicVolume !== undefined) synthAudio.setMusicVolume(newVals.musicVolume);
+    if (newVals.sfxVolume !== undefined) synthAudio.setSfxVolume(newVals.sfxVolume);
+    if (newVals.isMuted !== undefined) synthAudio.setMute(newVals.isMuted);
+  };
+
   const handleToggleMute = () => {
-    const muted = synthAudio.toggleMute();
-    setIsMuted(muted);
+    const nextMuted = !settings.isMuted;
+    handleUpdateSettings({ isMuted: nextMuted });
   };
 
   const handleToggleMusic = () => {
@@ -79,6 +118,18 @@ export default function App() {
   const handleOpenWorkshop = () => {
     if (engineRef.current) {
       engineRef.current.setGameState('GARAGE');
+    }
+  };
+
+  const handleOpenScrapbook = () => {
+    if (engineRef.current) {
+      engineRef.current.setGameState('SCRAPBOOK');
+    }
+  };
+
+  const handleOpenSettings = () => {
+    if (engineRef.current) {
+      engineRef.current.setGameState('SETTINGS');
     }
   };
 
@@ -106,6 +157,14 @@ export default function App() {
     }
   };
 
+  const handleResetProgress = () => {
+    clearGameData();
+    setHighestCombo(1);
+    if (engineRef.current) {
+      engineRef.current.resetGame();
+    }
+  };
+
   const handleVirtualInput = (throttle: number, steer: number, boost: boolean) => {
     if (engineRef.current) {
       engineRef.current.setVirtualInput(throttle, steer, boost);
@@ -125,8 +184,10 @@ export default function App() {
       {stats.gameState === 'TITLE' && (
         <TitleScreen
           onStart={handleStartGame}
-          isMuted={isMuted}
+          isMuted={settings.isMuted}
           onToggleMute={handleToggleMute}
+          onOpenScrapbook={handleOpenScrapbook}
+          onOpenSettings={handleOpenSettings}
         />
       )}
 
@@ -135,9 +196,12 @@ export default function App() {
         <GameHUD
           stats={stats}
           onOpenWorkshop={handleOpenWorkshop}
+          onOpenScrapbook={handleOpenScrapbook}
+          onOpenSettings={handleOpenSettings}
           onPause={handlePause}
-          isMuted={isMuted}
+          isMuted={settings.isMuted}
           onToggleMute={handleToggleMute}
+          showRadar={settings.showRadar}
           onVirtualInput={handleVirtualInput}
         />
       )}
@@ -158,10 +222,33 @@ export default function App() {
           onResume={handleResume}
           onRestart={handleRestart}
           onOpenWorkshop={handleOpenWorkshop}
-          isMuted={isMuted}
+          onOpenScrapbook={handleOpenScrapbook}
+          onOpenSettings={handleOpenSettings}
+          isMuted={settings.isMuted}
           onToggleMute={handleToggleMute}
           isMusicEnabled={isMusicEnabled}
           onToggleMusic={handleToggleMusic}
+        />
+      )}
+
+      {/* 6. Solstice Scrapbook (Heart Log) Modal */}
+      {stats.gameState === 'SCRAPBOOK' && (
+        <ScrapbookModal
+          unlockedGifts={stats.gifts}
+          clearedLandmarks={stats.landmarks}
+          highestCombo={highestCombo}
+          totalLetters={stats.loveLetters}
+          onClose={stats.snowClearedPercent > 0 ? handleResume : () => engineRef.current?.setGameState('TITLE')}
+        />
+      )}
+
+      {/* 7. Settings Modal */}
+      {stats.gameState === 'SETTINGS' && (
+        <SettingsModal
+          settings={settings}
+          onUpdateSettings={handleUpdateSettings}
+          onResetProgress={handleResetProgress}
+          onClose={stats.snowClearedPercent > 0 ? handleResume : () => engineRef.current?.setGameState('TITLE')}
         />
       )}
 

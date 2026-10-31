@@ -6,13 +6,16 @@
 
 import React, { useState } from 'react';
 import {
+  BookOpen,
   ChevronDown,
   ChevronUp,
+  Compass,
   Gift,
   Heart,
   Landmark,
   Mail,
   Pause,
+  Settings,
   Snowflake,
   Volume2,
   VolumeX,
@@ -21,22 +24,29 @@ import {
 } from 'lucide-react';
 import { COMBO_LEVELS } from '../game/constants';
 import type { GameHUDStats } from '../game/engine';
+import { VillageRadar } from './VillageRadar';
 
 interface GameHUDProps {
   stats: GameHUDStats;
   onOpenWorkshop: () => void;
+  onOpenScrapbook: () => void;
+  onOpenSettings: () => void;
   onPause: () => void;
   isMuted: boolean;
   onToggleMute: () => void;
+  showRadar: boolean;
   onVirtualInput: (throttle: number, steer: number, boost: boolean) => void;
 }
 
 export const GameHUD: React.FC<GameHUDProps> = ({
   stats,
   onOpenWorkshop,
+  onOpenScrapbook,
+  onOpenSettings,
   onPause,
   isMuted,
   onToggleMute,
+  showRadar,
   onVirtualInput,
 }) => {
   const [isDockCollapsed, setIsDockCollapsed] = useState(false);
@@ -147,6 +157,25 @@ export const GameHUD: React.FC<GameHUDProps> = ({
             <span className="font-mono text-[10px] text-rose-400">[G]</span>
           </button>
 
+          {/* Solstice Scrapbook / Heart Log */}
+          <button
+            onClick={onOpenScrapbook}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-800 text-xs font-semibold text-rose-300 shadow-md transition-colors cursor-pointer"
+            title="Open Solstice Scrapbook & Heart Log (L)"
+          >
+            <BookOpen className="w-4 h-4 text-rose-400" />
+            <span className="hidden md:inline">Log</span>
+          </button>
+
+          {/* Audio Preferences */}
+          <button
+            onClick={onOpenSettings}
+            className="p-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-800 text-slate-300 shadow-md transition-colors cursor-pointer"
+            title="Settings & Audio Preferences"
+          >
+            <Settings className="w-4 h-4 text-slate-300" />
+          </button>
+
           {/* Mute Toggle */}
           <button
             onClick={onToggleMute}
@@ -171,6 +200,33 @@ export const GameHUD: React.FC<GameHUDProps> = ({
       {stats.lastEventMessage && (
         <div className="self-center my-auto px-5 py-2.5 rounded-xl bg-slate-900/95 border border-rose-500/50 shadow-xl text-center text-xs md:text-sm text-slate-100 max-w-md animate-fade-in pointer-events-none">
           <p className="font-medium text-rose-200 leading-snug">{stats.lastEventMessage}</p>
+        </div>
+      )}
+
+      {/* 3. MINIMAP / VILLAGE RADAR (Floating Bottom-Right) */}
+      {showRadar && (
+        <div className="absolute bottom-24 right-4 pointer-events-auto">
+          <VillageRadar
+            playerX={stats.playerX}
+            playerZ={stats.playerZ}
+            heading={stats.heading}
+            landmarks={stats.landmarks.map((l) => ({
+              id: l.id,
+              name: l.name,
+              x: l.x,
+              z: l.z,
+              cleared: l.cleared,
+            }))}
+            gifts={stats.gifts.map((g) => ({
+              id: g.id,
+              name: g.name,
+              x: g.x,
+              z: g.z,
+              collected: g.collected,
+              revealed: !!g.revealed,
+            }))}
+            snowClearedPercent={stats.snowClearedPercent}
+          />
         </div>
       )}
 
@@ -283,11 +339,13 @@ export const GameHUD: React.FC<GameHUDProps> = ({
 
             {/* Flat Keyboard Hint */}
             <div className="hidden lg:flex items-center text-[11px] text-slate-400 gap-2 border-l border-slate-800 pl-4">
-              <span>WASD to steer</span>
+              <span>WASD steer</span>
               <span>·</span>
               <span>Space Boost</span>
               <span>·</span>
               <span>G Garage</span>
+              <span>·</span>
+              <span>L Scrapbook</span>
             </div>
           </div>
         )}

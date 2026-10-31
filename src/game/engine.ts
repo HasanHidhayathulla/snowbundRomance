@@ -47,6 +47,11 @@ export interface GameHUDStats {
   totalGifts: number;
   lastEventMessage: string | null;
   upgrades: Record<string, number>;
+  playerX: number;
+  playerZ: number;
+  heading: number;
+  landmarks: Landmark[];
+  gifts: RomanticGift[];
 }
 
 export class SnowPlowGameEngine {
@@ -363,6 +368,13 @@ export class SnowPlowGameEngine {
         if (this.gameState === 'PLAYING') {
           this.setGameState('PAUSED');
         } else if (this.gameState === 'PAUSED') {
+          this.setGameState('PLAYING');
+        }
+      }
+      if (e.code === 'KeyL') {
+        if (this.gameState === 'PLAYING') {
+          this.setGameState('SCRAPBOOK');
+        } else if (this.gameState === 'SCRAPBOOK') {
           this.setGameState('PLAYING');
         }
       }
@@ -717,7 +729,10 @@ export class SnowPlowGameEngine {
 
       // Buried snow depth check: is snow above gift cleared?
       const localSnow = this.snowGrid.getSnowDepthAt(gift.x, gift.z);
-      if (localSnow < 0.45 && giftMesh) {
+      const isRevealed = localSnow < 0.45;
+      gift.revealed = isRevealed;
+
+      if (isRevealed && giftMesh) {
         giftMesh.visible = true;
         // Idle bobbing and spinning
         giftMesh.position.y = 0.5 + Math.sin(performance.now() * 0.004) * 0.15;
@@ -846,6 +861,11 @@ export class SnowPlowGameEngine {
       totalGifts: this.gifts.length,
       lastEventMessage: this.lastEventMessage,
       upgrades: { ...this.upgrades },
+      playerX: this.posX,
+      playerZ: this.posZ,
+      heading: this.heading,
+      landmarks: this.landmarks.map((l) => ({ ...l })),
+      gifts: this.gifts.map((g) => ({ ...g })),
     });
   }
 
@@ -869,6 +889,11 @@ export class SnowPlowGameEngine {
       totalGifts: this.gifts.length,
       lastEventMessage: this.lastEventMessage,
       upgrades: { ...this.upgrades },
+      playerX: this.posX,
+      playerZ: this.posZ,
+      heading: this.heading,
+      landmarks: this.landmarks.map((l) => ({ ...l })),
+      gifts: this.gifts.map((g) => ({ ...g })),
     };
   }
 

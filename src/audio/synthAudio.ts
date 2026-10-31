@@ -10,10 +10,13 @@ class SynthAudioEngine {
   private sfxGain: GainNode | null = null;
   private musicGain: GainNode | null = null;
 
-  // Sound toggles
+  // Sound toggles and volume levels
   private isMuted: boolean = false;
   private isMusicEnabled: boolean = true;
   private isSfxEnabled: boolean = true;
+  private masterVol: number = 0.7;
+  private musicVol: number = 0.4;
+  private sfxVol: number = 0.8;
 
   // Dynamic engine audio nodes
   private engineOsc1: OscillatorNode | null = null;
@@ -43,17 +46,17 @@ class SynthAudioEngine {
 
       // Master bus
       this.masterGain = this.ctx.createGain();
-      this.masterGain.gain.setValueAtTime(0.7, this.ctx.currentTime);
+      this.masterGain.gain.setValueAtTime(this.isMuted ? 0 : this.masterVol, this.ctx.currentTime);
       this.masterGain.connect(this.ctx.destination);
 
       // SFX bus
       this.sfxGain = this.ctx.createGain();
-      this.sfxGain.gain.setValueAtTime(this.isSfxEnabled ? 0.8 : 0, this.ctx.currentTime);
+      this.sfxGain.gain.setValueAtTime(this.isSfxEnabled ? this.sfxVol : 0, this.ctx.currentTime);
       this.sfxGain.connect(this.masterGain);
 
       // Music bus
       this.musicGain = this.ctx.createGain();
-      this.musicGain.gain.setValueAtTime(this.isMusicEnabled ? 0.35 : 0, this.ctx.currentTime);
+      this.musicGain.gain.setValueAtTime(this.isMusicEnabled ? this.musicVol : 0, this.ctx.currentTime);
       this.musicGain.connect(this.masterGain);
 
       // Setup continuous engine rumble
@@ -410,15 +413,44 @@ class SynthAudioEngine {
   public toggleMute(): boolean {
     this.isMuted = !this.isMuted;
     if (this.masterGain && this.ctx) {
-      this.masterGain.gain.setValueAtTime(this.isMuted ? 0 : 0.7, this.ctx.currentTime);
+      this.masterGain.gain.setValueAtTime(this.isMuted ? 0 : this.masterVol, this.ctx.currentTime);
     }
     return this.isMuted;
+  }
+
+  public setMute(muted: boolean): boolean {
+    this.isMuted = muted;
+    if (this.masterGain && this.ctx) {
+      this.masterGain.gain.setValueAtTime(this.isMuted ? 0 : this.masterVol, this.ctx.currentTime);
+    }
+    return this.isMuted;
+  }
+
+  public setMasterVolume(vol: number) {
+    this.masterVol = Math.max(0, Math.min(1, vol));
+    if (this.masterGain && this.ctx && !this.isMuted) {
+      this.masterGain.gain.setValueAtTime(this.masterVol, this.ctx.currentTime);
+    }
+  }
+
+  public setMusicVolume(vol: number) {
+    this.musicVol = Math.max(0, Math.min(1, vol));
+    if (this.musicGain && this.ctx && this.isMusicEnabled) {
+      this.musicGain.gain.setValueAtTime(this.musicVol, this.ctx.currentTime);
+    }
+  }
+
+  public setSfxVolume(vol: number) {
+    this.sfxVol = Math.max(0, Math.min(1, vol));
+    if (this.sfxGain && this.ctx && this.isSfxEnabled) {
+      this.sfxGain.gain.setValueAtTime(this.sfxVol, this.ctx.currentTime);
+    }
   }
 
   public toggleMusic(): boolean {
     this.isMusicEnabled = !this.isMusicEnabled;
     if (this.musicGain && this.ctx) {
-      this.musicGain.gain.setValueAtTime(this.isMusicEnabled ? 0.35 : 0, this.ctx.currentTime);
+      this.musicGain.gain.setValueAtTime(this.isMusicEnabled ? this.musicVol : 0, this.ctx.currentTime);
     }
     if (this.isMusicEnabled && !this.musicIntervalId) {
       this.startAmbientMusic();
@@ -431,7 +463,7 @@ class SynthAudioEngine {
   public toggleSfx(): boolean {
     this.isSfxEnabled = !this.isSfxEnabled;
     if (this.sfxGain && this.ctx) {
-      this.sfxGain.gain.setValueAtTime(this.isSfxEnabled ? 0.8 : 0, this.ctx.currentTime);
+      this.sfxGain.gain.setValueAtTime(this.isSfxEnabled ? this.sfxVol : 0, this.ctx.currentTime);
     }
     return this.isSfxEnabled;
   }
@@ -440,7 +472,10 @@ class SynthAudioEngine {
     return {
       isMuted: this.isMuted,
       isMusicEnabled: this.isMusicEnabled,
-      isSfxEnabled: this.isSfxEnabled
+      isSfxEnabled: this.isSfxEnabled,
+      masterVolume: this.masterVol,
+      musicVolume: this.musicVol,
+      sfxVolume: this.sfxVol,
     };
   }
 }

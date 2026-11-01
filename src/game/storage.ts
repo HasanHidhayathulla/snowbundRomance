@@ -11,6 +11,16 @@ export interface GameSettings {
   radarZoom: number;    // 1.0 = standard, 1.5 = wide
 }
 
+export interface SavedPostcard {
+  id: string;
+  timestamp: number;
+  imageDataUrl: string;
+  caption: string;
+  filterName: string;
+  stampName: string;
+  clearedPercent: number;
+}
+
 export interface PersistentProgress {
   loveLetters: number;
   upgrades: Record<string, number>;
@@ -18,10 +28,12 @@ export interface PersistentProgress {
   clearedLandmarkIds: string[];
   highestCombo: number;
   totalSnowPlowedHectares: number;
+  savedPostcards?: SavedPostcard[];
 }
 
 const SETTINGS_KEY = 'snowbound_hearts_settings_v1';
 const PROGRESS_KEY = 'snowbound_hearts_progress_v1';
+const POSTCARDS_KEY = 'snowbound_hearts_postcards_v1';
 
 export const DEFAULT_SETTINGS: GameSettings = {
   masterVolume: 0.7,
@@ -93,10 +105,74 @@ export function saveGameProgress(progress: Partial<PersistentProgress>): Persist
   }
 }
 
+export function loadSavedPostcards(): SavedPostcard[] {
+  try {
+    const raw = localStorage.getItem(POSTCARDS_KEY);
+    if (!raw) return [];
+    return JSON.parse(raw);
+  } catch (err) {
+    console.warn('Failed to load saved postcards:', err);
+    return [];
+  }
+}
+
+export function savePostcardToStorage(postcard: SavedPostcard): SavedPostcard[] {
+  try {
+    const existing = loadSavedPostcards();
+    // Keep max 12 postcards to avoid exceeding localStorage quota
+    const updated = [postcard, ...existing.filter((p) => p.id !== postcard.id)].slice(0, 12);
+    localStorage.setItem(POSTCARDS_KEY, JSON.stringify(updated));
+    return updated;
+  } catch (err) {
+    console.warn('Failed to save postcard:', err);
+    return loadSavedPostcards();
+  }
+}
+
+export function deletePostcardFromStorage(id: string): SavedPostcard[] {
+  try {
+    const existing = loadSavedPostcards();
+    const updated = existing.filter((p) => p.id !== id);
+    localStorage.setItem(POSTCARDS_KEY, JSON.stringify(updated));
+    return updated;
+  } catch (err) {
+    console.warn('Failed to delete postcard:', err);
+    return loadSavedPostcards();
+  }
+}
+
+export function exportSaveDataJSON(): string {
+  const data = {
+    version: '1.0',
+    exportDate: new Date().toISOString(),
+    progress: loadGameProgress(),
+    settings: loadGameSettings(),
+  };
+  return JSON.stringify(data, null, 2);
+}
+
+export function importSaveDataJSON(jsonStr: string): boolean {
+  try {
+    const parsed = JSON.parse(jsonStr);
+    if (parsed && parsed.progress) {
+      saveGameProgress(parsed.progress);
+      if (parsed.settings) {
+        saveGameSettings(parsed.settings);
+      }
+      return true;
+    }
+    return false;
+  } catch (err) {
+    console.error('Failed to import save data:', err);
+    return false;
+  }
+}
+
 export function clearGameData(): void {
   try {
     localStorage.removeItem(PROGRESS_KEY);
     localStorage.removeItem(SETTINGS_KEY);
+    localStorage.removeItem(POSTCARDS_KEY);
   } catch (err) {
     console.warn('Failed to clear game data:', err);
   }

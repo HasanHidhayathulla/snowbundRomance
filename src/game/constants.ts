@@ -2,7 +2,7 @@
  * Game constants, upgrade definitions, collectibles, and balance parameters
  */
 
-export type GameState = 'TITLE' | 'PLAYING' | 'PAUSED' | 'GARAGE' | 'VICTORY' | 'SCRAPBOOK' | 'SETTINGS';
+export type GameState = 'TITLE' | 'PLAYING' | 'PAUSED' | 'GARAGE' | 'VICTORY' | 'SCRAPBOOK' | 'SETTINGS' | 'PHOTO';
 
 export interface UpgradeTier {
   level: number;

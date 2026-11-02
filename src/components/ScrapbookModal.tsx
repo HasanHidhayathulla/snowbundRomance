@@ -75,10 +75,16 @@ export const ScrapbookModal: React.FC<ScrapbookModalProps> = ({
     }
   };
 
+  const getSafePostcardImageUrl = (url: string): string | null => {
+    return /^data:image\/(?:png|jpeg|jpg|webp);base64,[a-z0-9+/=]+$/i.test(url) ? url : null;
+  };
+
   const handleDownloadPostcard = (pc: SavedPostcard, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
+    const safeUrl = getSafePostcardImageUrl(pc.imageDataUrl);
+    if (!safeUrl) return;
     const a = document.createElement('a');
-    a.href = pc.imageDataUrl;
+    a.href = safeUrl;
     a.download = `snowbound-postcard-${pc.id}.png`;
     a.click();
   };
@@ -421,43 +427,47 @@ export const ScrapbookModal: React.FC<ScrapbookModalProps> = ({
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                  {postcards.map((pc) => (
-                    <div
-                      key={pc.id}
-                      onClick={() => setSelectedPostcard(pc)}
-                      className="group relative rounded-xl overflow-hidden border border-slate-700/80 bg-slate-800/80 hover:border-rose-500/60 transition-all cursor-pointer shadow-md"
-                    >
-                      <img
-                        src={pc.imageDataUrl}
-                        alt="Saved Postcard"
-                        className="w-full aspect-[3/2] object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                      <div className="p-2.5 flex flex-col gap-1">
-                        <p className="text-xs font-medium text-slate-200 truncate italic">
-                          {pc.caption}
-                        </p>
-                        <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-slate-700/60">
-                          <span className="font-mono text-cyan-300">{pc.clearedPercent}% Plowed</span>
-                          <div className="flex items-center gap-1.5">
-                            <button
-                              onClick={(e) => handleDownloadPostcard(pc, e)}
-                              className="p-1 rounded hover:bg-slate-700 text-slate-300 hover:text-white"
-                              title="Download"
-                            >
-                              <Download className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={(e) => handleDeletePostcard(pc.id, e)}
-                              className="p-1 rounded hover:bg-rose-950/80 text-rose-400"
-                              title="Delete"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                  {postcards.map((pc) => {
+                    const safeImageUrl = getSafePostcardImageUrl(pc.imageDataUrl);
+                    if (!safeImageUrl) return null;
+                    return (
+                      <div
+                        key={pc.id}
+                        onClick={() => setSelectedPostcard(pc)}
+                        className="group relative rounded-xl overflow-hidden border border-slate-700/80 bg-slate-800/80 hover:border-rose-500/60 transition-all cursor-pointer shadow-md"
+                      >
+                        <img
+                          src={safeImageUrl}
+                          alt="Saved Postcard"
+                          className="w-full aspect-[3/2] object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                        <div className="p-2.5 flex flex-col gap-1">
+                          <p className="text-xs font-medium text-slate-200 truncate italic">
+                            {pc.caption}
+                          </p>
+                          <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-slate-700/60">
+                            <span className="font-mono text-cyan-300">{pc.clearedPercent}% Plowed</span>
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                onClick={(e) => handleDownloadPostcard(pc, e)}
+                                className="p-1 rounded hover:bg-slate-700 text-slate-300 hover:text-white"
+                                title="Download"
+                              >
+                                <Download className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={(e) => handleDeletePostcard(pc.id, e)}
+                                className="p-1 rounded hover:bg-rose-950/80 text-rose-400"
+                                title="Delete"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -465,7 +475,7 @@ export const ScrapbookModal: React.FC<ScrapbookModalProps> = ({
         </div>
 
         {/* Selected Postcard Fullscreen Lightbox Modal */}
-        {selectedPostcard && (
+        {selectedPostcard && getSafePostcardImageUrl(selectedPostcard.imageDataUrl) && (
           <div
             onClick={() => setSelectedPostcard(null)}
             className="absolute inset-0 bg-black/90 z-50 flex items-center justify-center p-6 cursor-pointer"
@@ -475,7 +485,7 @@ export const ScrapbookModal: React.FC<ScrapbookModalProps> = ({
               className="relative max-w-4xl w-full flex flex-col items-center gap-3 bg-slate-900 border border-slate-700 rounded-2xl p-4 shadow-2xl"
             >
               <img
-                src={selectedPostcard.imageDataUrl}
+                src={getSafePostcardImageUrl(selectedPostcard.imageDataUrl)!}
                 alt="Enlarged Postcard"
                 className="max-h-[70vh] w-auto object-contain rounded-lg shadow-lg"
               />

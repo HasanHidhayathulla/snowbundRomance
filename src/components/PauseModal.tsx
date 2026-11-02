@@ -12,6 +12,7 @@ interface PauseModalProps {
   onOpenScrapbook: () => void;
   onOpenPhotoMode: () => void;
   onOpenSettings: () => void;
+  onPhotoMode: () => void;
   isMuted: boolean;
   onToggleMute: () => void;
   isMusicEnabled: boolean;
@@ -25,6 +26,7 @@ export const PauseModal: React.FC<PauseModalProps> = ({
   onOpenScrapbook,
   onOpenPhotoMode,
   onOpenSettings,
+  onPhotoMode,
   isMuted,
   onToggleMute,
   isMusicEnabled,
@@ -46,6 +48,14 @@ export const PauseModal: React.FC<PauseModalProps> = ({
           >
             <Play className="w-4 h-4 fill-white" />
             <span>Resume Plowing (Esc)</span>
+          </button>
+
+          <button
+            onClick={onPhotoMode}
+            className="w-full py-2.5 px-4 rounded-xl bg-purple-950/70 hover:bg-purple-900/80 text-purple-200 font-medium flex items-center justify-center gap-2 border border-purple-800/60 transition-colors cursor-pointer"
+          >
+            <Camera className="w-4 h-4 text-purple-400" />
+            <span>Solstice Postcard Photo Studio (P)</span>
           </button>
 
           <button
@@ -76,8 +86,8 @@ export const PauseModal: React.FC<PauseModalProps> = ({
             onClick={onOpenSettings}
             className="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium flex items-center justify-center gap-2 border border-slate-700 transition-colors cursor-pointer"
           >
-            <Settings className="w-4 h-4 text-purple-400" />
-            <span>Sound & Minimap Settings</span>
+            <Settings className="w-4 h-4 text-slate-300" />
+            <span>Preferences & Skies</span>
           </button>
 
           <button

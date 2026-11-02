@@ -15,12 +15,24 @@ import {
   Heart,
   Lock,
   Mail,
+  Award,
+  Flame,
+  MapPin,
   Music,
+  Snowflake,
   Sparkles,
   Trash2,
+  Wrench,
   X,
+  Zap,
 } from 'lucide-react';
-import { LANDMARKS, ROMANTIC_GIFTS, type Landmark, type RomanticGift } from '../game/constants';
+import {
+  ACHIEVEMENTS,
+  LANDMARKS,
+  ROMANTIC_GIFTS,
+  type Landmark,
+  type RomanticGift,
+} from '../game/constants';
 import {
   deletePostcardFromStorage,
   loadSavedPostcards,
@@ -30,6 +42,7 @@ import {
 interface ScrapbookModalProps {
   unlockedGifts: RomanticGift[];
   clearedLandmarks: Landmark[];
+  unlockedAchievementIds?: string[];
   highestCombo: number;
   totalLetters: number;
   onClose: () => void;
@@ -39,12 +52,13 @@ interface ScrapbookModalProps {
 export const ScrapbookModal: React.FC<ScrapbookModalProps> = ({
   unlockedGifts,
   clearedLandmarks,
+  unlockedAchievementIds = [],
   highestCombo,
   totalLetters,
   onClose,
   onOpenPhotoMode,
 }) => {
-  const [activeTab, setActiveTab] = useState<'gifts' | 'couples' | 'postcards'>('gifts');
+  const [activeTab, setActiveTab] = useState<'gifts' | 'couples' | 'achievements' | 'postcards'>('gifts');
   const [postcards, setPostcards] = useState<SavedPostcard[]>(() => loadSavedPostcards());
   const [selectedPostcard, setSelectedPostcard] = useState<SavedPostcard | null>(null);
 
@@ -61,10 +75,16 @@ export const ScrapbookModal: React.FC<ScrapbookModalProps> = ({
     }
   };
 
+  const getSafePostcardImageUrl = (url: string): string | null => {
+    return /^data:image\/(?:png|jpeg|jpg|webp);base64,[a-z0-9+/=]+$/i.test(url) ? url : null;
+  };
+
   const handleDownloadPostcard = (pc: SavedPostcard, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
+    const safeUrl = getSafePostcardImageUrl(pc.imageDataUrl);
+    if (!safeUrl) return;
     const a = document.createElement('a');
-    a.href = pc.imageDataUrl;
+    a.href = safeUrl;
     a.download = `snowbound-postcard-${pc.id}.png`;
     a.click();
   };
@@ -86,8 +106,34 @@ export const ScrapbookModal: React.FC<ScrapbookModalProps> = ({
     }
   };
 
+  const getAchievementIcon = (iconName: string) => {
+    switch (iconName) {
+      case 'Snowflake':
+        return <Snowflake className="w-5 h-5 text-cyan-400" />;
+      case 'Zap':
+        return <Zap className="w-5 h-5 text-amber-400" />;
+      case 'Flame':
+        return <Flame className="w-5 h-5 text-orange-400" />;
+      case 'Heart':
+        return <Heart className="w-5 h-5 text-rose-500 fill-rose-500" />;
+      case 'Gift':
+        return <Gift className="w-5 h-5 text-pink-400" />;
+      case 'MapPin':
+        return <MapPin className="w-5 h-5 text-emerald-400" />;
+      case 'Wrench':
+        return <Wrench className="w-5 h-5 text-yellow-400" />;
+      case 'Camera':
+        return <Camera className="w-5 h-5 text-purple-400" />;
+      case 'Sparkles':
+        return <Sparkles className="w-5 h-5 text-rose-400" />;
+      default:
+        return <Award className="w-5 h-5 text-amber-400" />;
+    }
+  };
+
   const collectedCount = unlockedGifts.filter((g) => g.collected).length;
   const reunitedCount = clearedLandmarks.filter((l) => l.cleared).length;
+  const achievementsCount = unlockedAchievementIds.length;
 
   return (
     <div className="absolute inset-0 flex items-center justify-center p-4 bg-slate-950/80 z-40 select-none">
@@ -147,6 +193,18 @@ export const ScrapbookModal: React.FC<ScrapbookModalProps> = ({
             </button>
 
             <button
+              onClick={() => setActiveTab('achievements')}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer ${
+                activeTab === 'achievements'
+                  ? 'bg-rose-600 text-white shadow-md'
+                  : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Award className="w-3.5 h-3.5" />
+              <span>Milestones ({achievementsCount}/{ACHIEVEMENTS.length})</span>
+            </button>
+
+            <button
               onClick={() => setActiveTab('postcards')}
               className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer ${
                 activeTab === 'postcards'
@@ -169,6 +227,64 @@ export const ScrapbookModal: React.FC<ScrapbookModalProps> = ({
 
         {/* Content Body */}
         <div className="flex-1 overflow-y-auto py-4">
+          {activeTab === 'achievements' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+              {ACHIEVEMENTS.map((ach) => {
+                const isUnlocked = unlockedAchievementIds.includes(ach.id);
+                return (
+                  <div
+                    key={ach.id}
+                    className={`p-4 rounded-xl border transition-all ${
+                      isUnlocked
+                        ? 'bg-slate-800/90 border-amber-500/50 shadow-sm'
+                        : 'bg-slate-900/40 border-slate-800 text-slate-500'
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div
+                        className={`p-2.5 rounded-lg border ${
+                          isUnlocked
+                            ? 'bg-slate-900 border-amber-600/60 text-amber-300'
+                            : 'bg-slate-950/60 border-slate-800 text-slate-600'
+                        }`}
+                      >
+                        {isUnlocked ? (
+                          getAchievementIcon(ach.icon)
+                        ) : (
+                          <Lock className="w-5 h-5 text-slate-600" />
+                        )}
+                      </div>
+
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <h4
+                            className={`font-semibold text-sm ${
+                              isUnlocked ? 'text-slate-100' : 'text-slate-500'
+                            }`}
+                          >
+                            {ach.title}
+                          </h4>
+                          <span
+                            className={`text-[10px] px-2 py-0.5 rounded-full font-mono ${
+                              isUnlocked
+                                ? 'bg-amber-950/80 text-amber-300 border border-amber-800/40'
+                                : 'bg-slate-800 text-slate-500 border border-slate-700'
+                            }`}
+                          >
+                            +{ach.rewardLetters} Letters
+                          </span>
+                        </div>
+
+                        <p className="text-xs text-slate-300 mt-1.5 leading-relaxed">
+                          {ach.description}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
           {activeTab === 'gifts' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
               {ROMANTIC_GIFTS.map((g) => {
@@ -311,43 +427,47 @@ export const ScrapbookModal: React.FC<ScrapbookModalProps> = ({
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                  {postcards.map((pc) => (
-                    <div
-                      key={pc.id}
-                      onClick={() => setSelectedPostcard(pc)}
-                      className="group relative rounded-xl overflow-hidden border border-slate-700/80 bg-slate-800/80 hover:border-rose-500/60 transition-all cursor-pointer shadow-md"
-                    >
-                      <img
-                        src={pc.imageDataUrl}
-                        alt="Saved Postcard"
-                        className="w-full aspect-[3/2] object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                      <div className="p-2.5 flex flex-col gap-1">
-                        <p className="text-xs font-medium text-slate-200 truncate italic">
-                          {pc.caption}
-                        </p>
-                        <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-slate-700/60">
-                          <span className="font-mono text-cyan-300">{pc.clearedPercent}% Plowed</span>
-                          <div className="flex items-center gap-1.5">
-                            <button
-                              onClick={(e) => handleDownloadPostcard(pc, e)}
-                              className="p-1 rounded hover:bg-slate-700 text-slate-300 hover:text-white"
-                              title="Download"
-                            >
-                              <Download className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={(e) => handleDeletePostcard(pc.id, e)}
-                              className="p-1 rounded hover:bg-rose-950/80 text-rose-400"
-                              title="Delete"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                  {postcards.map((pc) => {
+                    const safeImageUrl = getSafePostcardImageUrl(pc.imageDataUrl);
+                    if (!safeImageUrl) return null;
+                    return (
+                      <div
+                        key={pc.id}
+                        onClick={() => setSelectedPostcard(pc)}
+                        className="group relative rounded-xl overflow-hidden border border-slate-700/80 bg-slate-800/80 hover:border-rose-500/60 transition-all cursor-pointer shadow-md"
+                      >
+                        <img
+                          src={safeImageUrl}
+                          alt="Saved Postcard"
+                          className="w-full aspect-[3/2] object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                        <div className="p-2.5 flex flex-col gap-1">
+                          <p className="text-xs font-medium text-slate-200 truncate italic">
+                            {pc.caption}
+                          </p>
+                          <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-slate-700/60">
+                            <span className="font-mono text-cyan-300">{pc.clearedPercent}% Plowed</span>
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                onClick={(e) => handleDownloadPostcard(pc, e)}
+                                className="p-1 rounded hover:bg-slate-700 text-slate-300 hover:text-white"
+                                title="Download"
+                              >
+                                <Download className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={(e) => handleDeletePostcard(pc.id, e)}
+                                className="p-1 rounded hover:bg-rose-950/80 text-rose-400"
+                                title="Delete"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -355,7 +475,7 @@ export const ScrapbookModal: React.FC<ScrapbookModalProps> = ({
         </div>
 
         {/* Selected Postcard Fullscreen Lightbox Modal */}
-        {selectedPostcard && (
+        {selectedPostcard && getSafePostcardImageUrl(selectedPostcard.imageDataUrl) && (
           <div
             onClick={() => setSelectedPostcard(null)}
             className="absolute inset-0 bg-black/90 z-50 flex items-center justify-center p-6 cursor-pointer"
@@ -365,7 +485,7 @@ export const ScrapbookModal: React.FC<ScrapbookModalProps> = ({
               className="relative max-w-4xl w-full flex flex-col items-center gap-3 bg-slate-900 border border-slate-700 rounded-2xl p-4 shadow-2xl"
             >
               <img
-                src={selectedPostcard.imageDataUrl}
+                src={getSafePostcardImageUrl(selectedPostcard.imageDataUrl)!}
                 alt="Enlarged Postcard"
                 className="max-h-[70vh] w-auto object-contain rounded-lg shadow-lg"
               />

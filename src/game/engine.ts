@@ -8,6 +8,7 @@ import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { synthAudio } from '../audio/synthAudio';
 import {
+  ACHIEVEMENTS,
   COMBO_LEVELS,
   LANDMARKS,
   ROMANTIC_GIFTS,
@@ -20,7 +21,8 @@ import {
 import {
   loadGameProgress,
   saveGameProgress,
-  type PersistentProgress,
+  loadGameSettings,
+  type SolsticeAtmosphere,
 } from './storage';
 import {
   createChalet,
@@ -57,6 +59,8 @@ export interface GameHUDStats {
   heading: number;
   landmarks: Landmark[];
   gifts: RomanticGift[];
+  unlockedAchievementIds: string[];
+  atmosphere: SolsticeAtmosphere;
 }
 
 import {
@@ -86,6 +90,12 @@ export class SnowPlowGameEngine {
   private headlampL!: THREE.SpotLight;
   private headlampR!: THREE.SpotLight;
 
+  // Lighting References for Atmosphere
+  private hemiLight!: THREE.HemisphereLight;
+  private sunLight!: THREE.DirectionalLight;
+  private rimLight!: THREE.DirectionalLight;
+  private atmosphere: SolsticeAtmosphere = 'twilight';
+
   // Vehicle Physics State
   private posX: number = 0;
   private posZ: number = 0;
@@ -107,7 +117,7 @@ export class SnowPlowGameEngine {
   private comboTimer: number = 0;
   private snowClearedAccumulator: number = 0;
   private snowClearedPercent: number = 0;
-  private loveLetters: number = 20; // Starting love letters for early garage exploration
+  private loveLetters: number = 20;
   private upgrades: Record<string, number> = {
     bladeWidth: 1,
     thermalLantern: 1,
@@ -115,6 +125,7 @@ export class SnowPlowGameEngine {
     loveMagnet: 1,
     comboTimer: 1,
   };
+  private unlockedAchievementIds: string[] = [];
 
   // World Elements
   private landmarks: Landmark[] = [];
@@ -142,8 +153,19 @@ export class SnowPlowGameEngine {
     this.container = container;
     this.onHUDUpdate = onHUDUpdate || null;
 
+    // Load saved progress
+    const saved = loadGameProgress();
+    this.loveLetters = saved.loveLetters || 20;
+    this.upgrades = { ...this.upgrades, ...saved.upgrades };
+    this.unlockedAchievementIds = [...(saved.unlockedAchievementIds || [])];
+
+    // Load saved settings
+    const settings = loadGameSettings();
+    this.atmosphere = settings.atmosphere || 'twilight';
+
     this.initWebGL();
     this.initScene();
+    this.applyAtmosphere(this.atmosphere);
     this.initWorldEntities();
     this.setupEventListeners();
     this.startLoop();
@@ -200,32 +222,32 @@ export class SnowPlowGameEngine {
 
     // 2. Lighting Rig
     // Cool Winter Ambient Fill
-    const hemiLight = new THREE.HemisphereLight(0xbfdbfe, 0x1e293b, 0.9);
-    this.scene.add(hemiLight);
+    this.hemiLight = new THREE.HemisphereLight(0xbfdbfe, 0x1e293b, 0.9);
+    this.scene.add(this.hemiLight);
 
     // Warm Golden Key Light (Low winter sun casting long shadows)
-    const sunLight = new THREE.DirectionalLight(0xffedd5, 1.8);
-    sunLight.position.set(40, 55, 30);
+    this.sunLight = new THREE.DirectionalLight(0xffedd5, 1.8);
+    this.sunLight.position.set(40, 55, 30);
     if (!this.isSoftwareGl) {
-      sunLight.castShadow = true;
-      sunLight.shadow.mapSize.width = 2048;
-      sunLight.shadow.mapSize.height = 2048;
-      sunLight.shadow.camera.near = 10;
-      sunLight.shadow.camera.far = 130;
+      this.sunLight.castShadow = true;
+      this.sunLight.shadow.mapSize.width = 2048;
+      this.sunLight.shadow.mapSize.height = 2048;
+      this.sunLight.shadow.camera.near = 10;
+      this.sunLight.shadow.camera.far = 130;
       const d = 45;
-      sunLight.shadow.camera.left = -d;
-      sunLight.shadow.camera.right = d;
-      sunLight.shadow.camera.top = d;
-      sunLight.shadow.camera.bottom = -d;
-      sunLight.shadow.bias = -0.0004;
-      sunLight.shadow.normalBias = 0.02;
+      this.sunLight.shadow.camera.left = -d;
+      this.sunLight.shadow.camera.right = d;
+      this.sunLight.shadow.camera.top = d;
+      this.sunLight.shadow.camera.bottom = -d;
+      this.sunLight.shadow.bias = -0.0004;
+      this.sunLight.shadow.normalBias = 0.02;
     }
-    this.scene.add(sunLight);
+    this.scene.add(this.sunLight);
 
     // Soft Romantic Violet Rim Fill
-    const rimLight = new THREE.DirectionalLight(0xf472b6, 0.6);
-    rimLight.position.set(-35, 25, -35);
-    this.scene.add(rimLight);
+    this.rimLight = new THREE.DirectionalLight(0xf472b6, 0.6);
+    this.rimLight.position.set(-35, 25, -35);
+    this.scene.add(this.rimLight);
 
     // 3. Subsystems
     this.snowGrid = new SnowGridSystem(this.scene);
@@ -416,7 +438,7 @@ export class SnowPlowGameEngine {
       if (e.code === 'KeyP') {
         if (this.gameState === 'PLAYING') {
           this.setGameState('PHOTO');
-        } else if (this.gameState === 'PHOTO') {
+        } else if (this.gameState === 'PHOTO' || this.gameState === 'PHOTO_MODE') {
           this.setGameState('PLAYING');
         }
       }
@@ -456,6 +478,96 @@ export class SnowPlowGameEngine {
     synthAudio.resume();
   }
 
+  public applyAtmosphere(atm: SolsticeAtmosphere) {
+    this.atmosphere = atm;
+    if (!this.scene) return;
+
+    if (atm === 'golden') {
+      this.scene.background = new THREE.Color(0x1a0f0a);
+      if (this.scene.fog instanceof THREE.FogExp2) {
+        this.scene.fog.color.setHex(0x271306);
+        this.scene.fog.density = 0.014;
+      }
+      if (this.hemiLight) {
+        this.hemiLight.color.setHex(0xfef08a);
+        this.hemiLight.groundColor.setHex(0x451a03);
+        this.hemiLight.intensity = 1.0;
+      }
+      if (this.sunLight) {
+        this.sunLight.color.setHex(0xfde68a);
+        this.sunLight.intensity = 2.0;
+      }
+      if (this.rimLight) {
+        this.rimLight.color.setHex(0xf97316);
+        this.rimLight.intensity = 0.8;
+      }
+    } else if (atm === 'aurora') {
+      this.scene.background = new THREE.Color(0x061814);
+      if (this.scene.fog instanceof THREE.FogExp2) {
+        this.scene.fog.color.setHex(0x08261e);
+        this.scene.fog.density = 0.015;
+      }
+      if (this.hemiLight) {
+        this.hemiLight.color.setHex(0x6ee7b7);
+        this.hemiLight.groundColor.setHex(0x022c22);
+        this.hemiLight.intensity = 0.95;
+      }
+      if (this.sunLight) {
+        this.sunLight.color.setHex(0xa7f3d0);
+        this.sunLight.intensity = 1.6;
+      }
+      if (this.rimLight) {
+        this.rimLight.color.setHex(0xc084fc);
+        this.rimLight.intensity = 0.9;
+      }
+    } else {
+      // Twilight default
+      this.scene.background = new THREE.Color(0x0c1322);
+      if (this.scene.fog instanceof THREE.FogExp2) {
+        this.scene.fog.color.setHex(0x0e172a);
+        this.scene.fog.density = 0.016;
+      }
+      if (this.hemiLight) {
+        this.hemiLight.color.setHex(0xbfdbfe);
+        this.hemiLight.groundColor.setHex(0x1e293b);
+        this.hemiLight.intensity = 0.9;
+      }
+      if (this.sunLight) {
+        this.sunLight.color.setHex(0xffedd5);
+        this.sunLight.intensity = 1.8;
+      }
+      if (this.rimLight) {
+        this.rimLight.color.setHex(0xf472b6);
+        this.rimLight.intensity = 0.6;
+      }
+    }
+  }
+
+  public captureSnapshot(): string {
+    // Force a render pass and grab base64 image data url
+    this.renderer.render(this.scene, this.camera);
+    const dataUrl = this.renderer.domElement.toDataURL('image/png');
+    this.checkAchievement('shutterbug');
+    return dataUrl;
+  }
+
+  public checkAchievement(id: string) {
+    if (this.unlockedAchievementIds.includes(id)) return;
+    const ach = ACHIEVEMENTS.find((a) => a.id === id);
+    if (!ach) return;
+
+    this.unlockedAchievementIds.push(id);
+    this.loveLetters += ach.rewardLetters;
+    saveGameProgress({
+      unlockedAchievementIds: [...this.unlockedAchievementIds],
+      loveLetters: this.loveLetters,
+    });
+
+    synthAudio.playGiftPickup();
+    this.particles.emitRomanticHearts(this.posX, 1.8, this.posZ, 16);
+    this.triggerMessage(`🏆 Solstice Milestone: ${ach.title}! (+${ach.rewardLetters} Letters)`);
+  }
+
   public startGame() {
     this.gameState = 'PLAYING';
     synthAudio.init();
@@ -482,6 +594,10 @@ export class SnowPlowGameEngine {
     if (this.loveLetters >= nextTier.cost) {
       this.loveLetters -= nextTier.cost;
       this.upgrades[upgradeId] = currentLevel + 1;
+
+      if (this.upgrades[upgradeId] === config.tiers.length) {
+        this.checkAchievement('master_mechanic');
+      }
 
       synthAudio.playUpgradeSound();
       this.triggerMessage(`Upgraded ${config.name} to Tier ${currentLevel + 1}: ${nextTier.title}!`);
@@ -687,6 +803,11 @@ export class SnowPlowGameEngine {
     this.tractorGroup.position.set(this.posX, 0, this.posZ);
     this.tractorGroup.rotation.y = this.heading;
 
+    // Check Speed milestone (24 km/h = ~6.67 m/s)
+    if (Math.abs(this.speed) * 3.6 >= 24) {
+      this.checkAchievement('speed_demon');
+    }
+
     // Wheel animation & steering
     const wheelRotSpeed = (this.speed / 0.65) * dt;
     this.frontWheels.forEach((w) => {
@@ -731,12 +852,24 @@ export class SnowPlowGameEngine {
       this.snowClearedAccumulator += plowing.cellsClearedThisFrame;
       this.particles.emitSnowSpray(bladeWorldX, 0.1, bladeWorldZ, this.heading, Math.abs(this.speed));
 
+      if (this.snowClearedPercent > 0) {
+        this.checkAchievement('first_tracks');
+      }
+
       // Combo management: continuous plowing sustains and escalates combo
       this.comboTimer = comboWindow;
       if (this.snowClearedAccumulator > 35 * this.comboLevel) {
         this.snowClearedAccumulator = 0;
         if (this.comboLevel < COMBO_LEVELS.length) {
           this.comboLevel++;
+
+          if (this.comboLevel >= 3) {
+            this.checkAchievement('sweet_combo');
+          }
+          if (this.comboLevel >= 5) {
+            this.checkAchievement('midnight_waltz');
+          }
+
           synthAudio.playComboChime(this.comboLevel);
           this.particles.emitRomanticHearts(this.posX, 1.2, this.posZ, 8);
           this.cameraShakeIntensity = 0.15;
@@ -745,6 +878,7 @@ export class SnowPlowGameEngine {
           const currentCombo = COMBO_LEVELS[this.comboLevel - 1];
           const lettersGained = Math.round(5 * currentCombo.multiplier);
           this.loveLetters += lettersGained;
+          saveGameProgress({ loveLetters: this.loveLetters });
           this.triggerMessage(`${currentCombo.title}! Combo x${currentCombo.multiplier.toFixed(1)} (+${lettersGained} Letters)`);
         }
       }
@@ -796,6 +930,17 @@ export class SnowPlowGameEngine {
           gift.collected = true;
           giftMesh.visible = false;
           this.loveLetters += gift.value;
+
+          const collectedCount = this.gifts.filter((g) => g.collected).length;
+          if (collectedCount >= 3) {
+            this.checkAchievement('keepsake_hunter');
+          }
+
+          saveGameProgress({
+            unlockedGiftIds: this.gifts.filter((g) => g.collected).map((g) => g.id),
+            loveLetters: this.loveLetters,
+          });
+
           synthAudio.playGiftPickup();
           this.hitstopDuration = 0.06; // brief hitstop
           this.particles.emitRomanticHearts(gift.x, 1.0, gift.z, 20);
@@ -824,6 +969,7 @@ export class SnowPlowGameEngine {
 
           const randomQuote = landmark.coupleCoupleQuotes[Math.floor(Math.random() * landmark.coupleCoupleQuotes.length)];
           this.loveLetters += 50;
+          this.checkAchievement('first_reunion');
           this.saveProgressState();
           this.triggerMessage(`${landmark.name} Cleared! Couple reunited: ${randomQuote}`);
         } else {
@@ -832,9 +978,10 @@ export class SnowPlowGameEngine {
       }
     });
 
-    // Check Victory Condition: All 4 landmarks cleared or >85% total snow cleared
+    // Check Victory Condition: All 4 landmarks cleared
     if (allCleared && this.landmarks.length > 0) {
       this.gameState = 'VICTORY';
+      this.checkAchievement('grand_savior');
       synthAudio.playLandmarkReunion();
       this.triggerMessage('Grand Solstice Reached! The whole village is reunited in love!');
     }
@@ -913,6 +1060,8 @@ export class SnowPlowGameEngine {
       heading: this.heading,
       landmarks: this.landmarks.map((l) => ({ ...l })),
       gifts: this.gifts.map((g) => ({ ...g })),
+      unlockedAchievementIds: [...this.unlockedAchievementIds],
+      atmosphere: this.atmosphere,
     });
   }
 
@@ -941,6 +1090,8 @@ export class SnowPlowGameEngine {
       heading: this.heading,
       landmarks: this.landmarks.map((l) => ({ ...l })),
       gifts: this.gifts.map((g) => ({ ...g })),
+      unlockedAchievementIds: [...this.unlockedAchievementIds],
+      atmosphere: this.atmosphere,
     };
   }
 

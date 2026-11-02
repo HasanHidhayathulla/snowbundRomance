@@ -7,13 +7,14 @@ import React, { useEffect, useRef, useState } from 'react';
 import { synthAudio } from './audio/synthAudio';
 import { GameHUD } from './components/GameHUD';
 import { PauseModal } from './components/PauseModal';
+import { PhotoPostcardModal } from './components/PhotoPostcardModal';
 import { PhotoModeModal } from './components/PhotoModeModal';
 import { ScrapbookModal } from './components/ScrapbookModal';
 import { SettingsModal } from './components/SettingsModal';
 import { ShopModal } from './components/ShopModal';
 import { TitleScreen } from './components/TitleScreen';
 import { VictoryModal } from './components/VictoryModal';
-import { LANDMARKS, ROMANTIC_GIFTS } from './game/constants';
+import { ACHIEVEMENTS, LANDMARKS, ROMANTIC_GIFTS } from './game/constants';
 import { SnowPlowGameEngine, type GameHUDStats } from './game/engine';
 import {
   clearGameData,
@@ -22,11 +23,13 @@ import {
   saveGameProgress,
   saveGameSettings,
   type GameSettings,
+  type SolsticeAtmosphere,
 } from './game/storage';
 
 export default function App() {
   const canvasMountRef = useRef<HTMLDivElement>(null);
   const engineRef = useRef<SnowPlowGameEngine | null>(null);
+  const [snapshotUrl, setSnapshotUrl] = useState<string | null>(null);
 
   // Settings & Audio state
   const [settings, setSettings] = useState<GameSettings>(() => loadGameSettings());
@@ -61,6 +64,8 @@ export default function App() {
       loveMagnet: 1,
       comboTimer: 1,
     },
+    unlockedAchievementIds: [],
+    atmosphere: settings.atmosphere || 'twilight',
   });
 
   useEffect(() => {
@@ -104,6 +109,17 @@ export default function App() {
     if (newVals.musicVolume !== undefined) synthAudio.setMusicVolume(newVals.musicVolume);
     if (newVals.sfxVolume !== undefined) synthAudio.setSfxVolume(newVals.sfxVolume);
     if (newVals.isMuted !== undefined) synthAudio.setMute(newVals.isMuted);
+    if (newVals.atmosphere !== undefined && engineRef.current) {
+      engineRef.current.applyAtmosphere(newVals.atmosphere);
+    }
+  };
+
+  const handlePhotoMode = () => {
+    if (engineRef.current) {
+      const snap = engineRef.current.captureSnapshot();
+      setSnapshotUrl(snap);
+      engineRef.current.setGameState('PHOTO_MODE');
+    }
   };
 
   const handleToggleMute = () => {
@@ -213,6 +229,7 @@ export default function App() {
           onOpenScrapbook={handleOpenScrapbook}
           onOpenPhotoMode={handleOpenPhotoMode}
           onOpenSettings={handleOpenSettings}
+          onPhotoMode={handlePhotoMode}
           onPause={handlePause}
           isMuted={settings.isMuted}
           onToggleMute={handleToggleMute}
@@ -240,6 +257,7 @@ export default function App() {
           onOpenScrapbook={handleOpenScrapbook}
           onOpenPhotoMode={handleOpenPhotoMode}
           onOpenSettings={handleOpenSettings}
+          onPhotoMode={handlePhotoMode}
           isMuted={settings.isMuted}
           onToggleMute={handleToggleMute}
           isMusicEnabled={isMusicEnabled}
@@ -262,10 +280,25 @@ export default function App() {
         <ScrapbookModal
           unlockedGifts={stats.gifts}
           clearedLandmarks={stats.landmarks}
+          unlockedAchievementIds={stats.unlockedAchievementIds}
           highestCombo={highestCombo}
           totalLetters={stats.loveLetters}
           onClose={stats.snowClearedPercent > 0 ? handleResume : () => engineRef.current?.setGameState('TITLE')}
           onOpenPhotoMode={handleOpenPhotoMode}
+        />
+      )}
+
+      {/* 7. Solstice Postcard Photo Mode Modal */}
+      {/* 8. Solstice Postcard Photo Mode Modal */}
+      {stats.gameState === 'PHOTO_MODE' && (
+        <PhotoPostcardModal
+          photoDataUrl={snapshotUrl}
+          onClose={handleResume}
+          onPostcardSaved={() => {
+            if (engineRef.current) {
+              engineRef.current.checkAchievement('shutterbug');
+            }
+          }}
         />
       )}
 

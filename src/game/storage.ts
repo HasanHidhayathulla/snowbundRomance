@@ -2,6 +2,8 @@
  * LocalStorage Persistence and Settings Management for Snowbound Hearts
  */
 
+export type SolsticeAtmosphere = 'twilight' | 'golden' | 'aurora';
+
 export interface GameSettings {
   masterVolume: number; // 0.0 - 1.0
   musicVolume: number;  // 0.0 - 1.0
@@ -9,6 +11,7 @@ export interface GameSettings {
   isMuted: boolean;
   showRadar: boolean;
   radarZoom: number;    // 1.0 = standard, 1.5 = wide
+  atmosphere: SolsticeAtmosphere;
 }
 
 export interface SavedPostcard {
@@ -26,7 +29,10 @@ export interface PersistentProgress {
   upgrades: Record<string, number>;
   unlockedGiftIds: string[];
   clearedLandmarkIds: string[];
+  unlockedAchievementIds: string[];
   highestCombo: number;
+  totalCellsPlowed: number;
+  postcardsCaptured: number;
   totalSnowPlowedHectares: number;
   savedPostcards?: SavedPostcard[];
 }
@@ -42,6 +48,7 @@ export const DEFAULT_SETTINGS: GameSettings = {
   isMuted: false,
   showRadar: true,
   radarZoom: 1.0,
+  atmosphere: 'twilight',
 };
 
 export const DEFAULT_PROGRESS: PersistentProgress = {
@@ -55,7 +62,10 @@ export const DEFAULT_PROGRESS: PersistentProgress = {
   },
   unlockedGiftIds: [],
   clearedLandmarkIds: [],
+  unlockedAchievementIds: [],
   highestCombo: 1,
+  totalCellsPlowed: 0,
+  postcardsCaptured: 0,
   totalSnowPlowedHectares: 0,
 };
 

@@ -2,7 +2,7 @@
  * Game constants, upgrade definitions, collectibles, and balance parameters
  */
 
-export type GameState = 'TITLE' | 'PLAYING' | 'PAUSED' | 'GARAGE' | 'VICTORY' | 'SCRAPBOOK' | 'SETTINGS' | 'PHOTO';
+export type GameState = 'TITLE' | 'PLAYING' | 'PAUSED' | 'GARAGE' | 'VICTORY' | 'SCRAPBOOK' | 'SETTINGS' | 'PHOTO' | 'PHOTO_MODE';
 
 export interface UpgradeTier {
   level: number;
@@ -168,6 +168,80 @@ export const COMBO_LEVELS = [
   { level: 6, multiplier: 5.0, title: 'Soulmate Spark', color: '#f43f5e' },
   { level: 7, multiplier: 7.0, title: 'Aurora Romance', color: '#e11d48' },
   { level: 8, multiplier: 10.0, title: 'True Love Eternal', color: '#ff0055' },
+];
+
+export interface SolsticeAchievement {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  rewardLetters: number;
+}
+
+export const ACHIEVEMENTS: SolsticeAchievement[] = [
+  {
+    id: 'first_tracks',
+    title: 'First Tracks in the Powder',
+    description: 'Plow your first snowdrifts through Valentine Valley.',
+    icon: 'Snowflake',
+    rewardLetters: 15,
+  },
+  {
+    id: 'speed_demon',
+    title: 'Blizzard Dasher',
+    description: 'Reach a blistering plow speed of 24 km/h using Steam Turbo.',
+    icon: 'Zap',
+    rewardLetters: 25,
+  },
+  {
+    id: 'sweet_combo',
+    title: 'Warm Conversation',
+    description: 'Reach a Combo Multiplier of x2.0 or higher.',
+    icon: 'Flame',
+    rewardLetters: 30,
+  },
+  {
+    id: 'midnight_waltz',
+    title: 'Midnight Waltz',
+    description: 'Achieve a romantic Combo Multiplier of x3.5 or higher.',
+    icon: 'Heart',
+    rewardLetters: 50,
+  },
+  {
+    id: 'keepsake_hunter',
+    title: 'Solstice Sleuth',
+    description: 'Uncover and collect at least 3 buried solstice keepsakes.',
+    icon: 'Gift',
+    rewardLetters: 35,
+  },
+  {
+    id: 'first_reunion',
+    title: 'Love Reconnected',
+    description: 'Clear the snow around your first village landmark.',
+    icon: 'MapPin',
+    rewardLetters: 40,
+  },
+  {
+    id: 'master_mechanic',
+    title: 'Master Blacksmith',
+    description: 'Upgrade any tractor equipment to its maximum tier.',
+    icon: 'Wrench',
+    rewardLetters: 60,
+  },
+  {
+    id: 'shutterbug',
+    title: 'Solstice Photographer',
+    description: 'Capture a scenic postcard using Photo Mode.',
+    icon: 'Camera',
+    rewardLetters: 20,
+  },
+  {
+    id: 'grand_savior',
+    title: 'Valley of Reunited Hearts',
+    description: 'Clear all 4 landmarks and bring all lovers together.',
+    icon: 'Sparkles',
+    rewardLetters: 100,
+  },
 ];
 
 export const WORLD_SIZE = 96; // 96x96 meter village area

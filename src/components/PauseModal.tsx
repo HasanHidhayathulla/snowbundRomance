@@ -10,6 +10,7 @@ interface PauseModalProps {
   onRestart: () => void;
   onOpenWorkshop: () => void;
   onOpenScrapbook: () => void;
+  onOpenPhotoMode: () => void;
   onOpenSettings: () => void;
   onPhotoMode: () => void;
   isMuted: boolean;
@@ -23,6 +24,7 @@ export const PauseModal: React.FC<PauseModalProps> = ({
   onRestart,
   onOpenWorkshop,
   onOpenScrapbook,
+  onOpenPhotoMode,
   onOpenSettings,
   onPhotoMode,
   isMuted,
@@ -65,11 +67,19 @@ export const PauseModal: React.FC<PauseModalProps> = ({
           </button>
 
           <button
+            onClick={onOpenPhotoMode}
+            className="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium flex items-center justify-center gap-2 border border-slate-700 transition-colors cursor-pointer"
+          >
+            <Camera className="w-4 h-4 text-pink-400" />
+            <span>Solstice Postcard Camera (P)</span>
+          </button>
+
+          <button
             onClick={onOpenScrapbook}
             className="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium flex items-center justify-center gap-2 border border-slate-700 transition-colors cursor-pointer"
           >
             <BookOpen className="w-4 h-4 text-rose-400" />
-            <span>Solstice Scrapbook & Heart Log (L)</span>
+            <span>Solstice Scrapbook & Album (L)</span>
           </button>
 
           <button

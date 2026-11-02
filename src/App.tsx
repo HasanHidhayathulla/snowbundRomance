@@ -7,6 +7,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { synthAudio } from './audio/synthAudio';
 import { GameHUD } from './components/GameHUD';
 import { PauseModal } from './components/PauseModal';
+import { PhotoModeModal } from './components/PhotoModeModal';
 import { ScrapbookModal } from './components/ScrapbookModal';
 import { SettingsModal } from './components/SettingsModal';
 import { ShopModal } from './components/ShopModal';
@@ -127,6 +128,19 @@ export default function App() {
     }
   };
 
+  const handleOpenPhotoMode = () => {
+    if (engineRef.current) {
+      engineRef.current.setGameState('PHOTO');
+    }
+  };
+
+  const handleCapturePostcard = async (filterId: string, stampId: string, caption: string) => {
+    if (engineRef.current) {
+      return engineRef.current.capturePostcard(filterId, stampId, caption);
+    }
+    return '';
+  };
+
   const handleOpenSettings = () => {
     if (engineRef.current) {
       engineRef.current.setGameState('SETTINGS');
@@ -197,6 +211,7 @@ export default function App() {
           stats={stats}
           onOpenWorkshop={handleOpenWorkshop}
           onOpenScrapbook={handleOpenScrapbook}
+          onOpenPhotoMode={handleOpenPhotoMode}
           onOpenSettings={handleOpenSettings}
           onPause={handlePause}
           isMuted={settings.isMuted}
@@ -223,6 +238,7 @@ export default function App() {
           onRestart={handleRestart}
           onOpenWorkshop={handleOpenWorkshop}
           onOpenScrapbook={handleOpenScrapbook}
+          onOpenPhotoMode={handleOpenPhotoMode}
           onOpenSettings={handleOpenSettings}
           isMuted={settings.isMuted}
           onToggleMute={handleToggleMute}
@@ -231,7 +247,17 @@ export default function App() {
         />
       )}
 
-      {/* 6. Solstice Scrapbook (Heart Log) Modal */}
+      {/* 6. Solstice Photo Mode (Snapshot Camera) */}
+      {stats.gameState === 'PHOTO' && (
+        <PhotoModeModal
+          snowClearedPercent={stats.snowClearedPercent}
+          onCapture={handleCapturePostcard}
+          onClose={handleResume}
+          onOpenScrapbook={handleOpenScrapbook}
+        />
+      )}
+
+      {/* 7. Solstice Scrapbook (Heart Log & Album) Modal */}
       {stats.gameState === 'SCRAPBOOK' && (
         <ScrapbookModal
           unlockedGifts={stats.gifts}
@@ -239,10 +265,11 @@ export default function App() {
           highestCombo={highestCombo}
           totalLetters={stats.loveLetters}
           onClose={stats.snowClearedPercent > 0 ? handleResume : () => engineRef.current?.setGameState('TITLE')}
+          onOpenPhotoMode={handleOpenPhotoMode}
         />
       )}
 
-      {/* 7. Settings Modal */}
+      {/* 8. Settings Modal */}
       {stats.gameState === 'SETTINGS' && (
         <SettingsModal
           settings={settings}

@@ -7,6 +7,7 @@
 import React, { useState } from 'react';
 import {
   BookOpen,
+  Camera,
   ChevronDown,
   ChevronUp,
   Compass,
@@ -30,6 +31,7 @@ interface GameHUDProps {
   stats: GameHUDStats;
   onOpenWorkshop: () => void;
   onOpenScrapbook: () => void;
+  onOpenPhotoMode: () => void;
   onOpenSettings: () => void;
   onPause: () => void;
   isMuted: boolean;
@@ -42,6 +44,7 @@ export const GameHUD: React.FC<GameHUDProps> = ({
   stats,
   onOpenWorkshop,
   onOpenScrapbook,
+  onOpenPhotoMode,
   onOpenSettings,
   onPause,
   isMuted,
@@ -155,6 +158,17 @@ export const GameHUD: React.FC<GameHUDProps> = ({
             <Wrench className="w-4 h-4 text-amber-300" />
             <span className="hidden sm:inline">Workshop</span>
             <span className="font-mono text-[10px] text-rose-400">[G]</span>
+          </button>
+
+          {/* Postcard Photo Mode */}
+          <button
+            onClick={onOpenPhotoMode}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-800 text-xs font-semibold text-pink-300 shadow-md transition-colors cursor-pointer"
+            title="Postcard Camera Photo Mode (P)"
+          >
+            <Camera className="w-4 h-4 text-pink-400" />
+            <span className="hidden sm:inline">Photo</span>
+            <span className="font-mono text-[10px] text-pink-400">[P]</span>
           </button>
 
           {/* Solstice Scrapbook / Heart Log */}
@@ -343,9 +357,11 @@ export const GameHUD: React.FC<GameHUDProps> = ({
               <span>·</span>
               <span>Space Boost</span>
               <span>·</span>
+              <span>P Photo</span>
+              <span>·</span>
               <span>G Garage</span>
               <span>·</span>
-              <span>L Scrapbook</span>
+              <span>L Album</span>
             </div>
           </div>
         )}

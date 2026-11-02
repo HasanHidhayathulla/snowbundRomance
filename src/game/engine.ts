@@ -18,6 +18,11 @@ import {
   type RomanticGift,
 } from './constants';
 import {
+  loadGameProgress,
+  saveGameProgress,
+  type PersistentProgress,
+} from './storage';
+import {
   createChalet,
   createCollectibleGift,
   createCoupleModel,
@@ -53,6 +58,11 @@ export interface GameHUDStats {
   landmarks: Landmark[];
   gifts: RomanticGift[];
 }
+
+import {
+  generatePostcardDataUrl,
+  type CompositePostcardOptions,
+} from './photoCapture';
 
 export class SnowPlowGameEngine {
   public container: HTMLElement;
@@ -221,6 +231,13 @@ export class SnowPlowGameEngine {
     this.snowGrid = new SnowGridSystem(this.scene);
     this.particles = new ParticleSystem(this.scene);
 
+    // Load persistent progress if available
+    const saved = loadGameProgress();
+    if (saved) {
+      if (typeof saved.loveLetters === 'number') this.loveLetters = saved.loveLetters;
+      if (saved.upgrades) this.upgrades = { ...this.upgrades, ...saved.upgrades };
+    }
+
     // 4. Hero Tractor
     const tractorData = createHeartPlowTractor();
     this.tractorGroup = tractorData.group;
@@ -305,7 +322,14 @@ export class SnowPlowGameEngine {
     });
 
     // 4. Landmarks
-    this.landmarks = LANDMARKS.map((lm) => ({ ...lm, cleared: false }));
+    const saved = loadGameProgress();
+    const savedClearedIds = new Set(saved?.clearedLandmarkIds || []);
+    const savedGiftIds = new Set(saved?.unlockedGiftIds || []);
+
+    this.landmarks = LANDMARKS.map((lm) => ({
+      ...lm,
+      cleared: savedClearedIds.has(lm.id),
+    }));
 
     this.landmarks.forEach((lm) => {
       let landmarkMesh: THREE.Group;
@@ -327,19 +351,23 @@ export class SnowPlowGameEngine {
       this.scene.add(landmarkMesh);
       this.landmarkMeshes.set(lm.id, landmarkMesh);
 
-      // Reunited couple initially hidden until cleared
+      // Reunited couple
       const couple = createCoupleModel();
       couple.position.set(lm.x + 1.8, 0, lm.z + 1.8);
-      couple.visible = false;
+      couple.visible = lm.cleared;
       this.scene.add(couple);
       this.coupleMeshes.set(lm.id, couple);
     });
 
     // 5. Buried Romantic Collectibles
-    this.gifts = ROMANTIC_GIFTS.map((g) => ({ ...g, collected: false }));
+    this.gifts = ROMANTIC_GIFTS.map((g) => ({
+      ...g,
+      collected: savedGiftIds.has(g.id),
+    }));
     this.gifts.forEach((g) => {
       const giftGroup = createCollectibleGift();
       giftGroup.position.set(g.x, 0.4, g.z);
+      giftGroup.visible = !g.collected;
       this.scene.add(giftGroup);
       this.giftMeshes.set(g.id, giftGroup);
     });
@@ -382,6 +410,13 @@ export class SnowPlowGameEngine {
         if (this.gameState === 'PLAYING') {
           this.setGameState('GARAGE');
         } else if (this.gameState === 'GARAGE') {
+          this.setGameState('PLAYING');
+        }
+      }
+      if (e.code === 'KeyP') {
+        if (this.gameState === 'PLAYING') {
+          this.setGameState('PHOTO');
+        } else if (this.gameState === 'PHOTO') {
           this.setGameState('PLAYING');
         }
       }
@@ -457,10 +492,20 @@ export class SnowPlowGameEngine {
         this.plowBladeGroup.scale.set(width / 2.2, 1, 1);
       }
 
+      this.saveProgressState();
       this.pushHUDUpdate();
       return true;
     }
     return false;
+  }
+
+  private saveProgressState() {
+    saveGameProgress({
+      loveLetters: this.loveLetters,
+      upgrades: { ...this.upgrades },
+      clearedLandmarkIds: this.landmarks.filter((l) => l.cleared).map((l) => l.id),
+      unlockedGiftIds: this.gifts.filter((g) => g.collected).map((g) => g.id),
+    });
   }
 
   private triggerMessage(msg: string) {
@@ -754,6 +799,7 @@ export class SnowPlowGameEngine {
           synthAudio.playGiftPickup();
           this.hitstopDuration = 0.06; // brief hitstop
           this.particles.emitRomanticHearts(gift.x, 1.0, gift.z, 20);
+          this.saveProgressState();
           this.triggerMessage(`Found ${gift.name}! ${gift.quote}`);
         }
       } else if (giftMesh) {
@@ -778,6 +824,7 @@ export class SnowPlowGameEngine {
 
           const randomQuote = landmark.coupleCoupleQuotes[Math.floor(Math.random() * landmark.coupleCoupleQuotes.length)];
           this.loveLetters += 50;
+          this.saveProgressState();
           this.triggerMessage(`${landmark.name} Cleared! Couple reunited: ${randomQuote}`);
         } else {
           allCleared = false;
@@ -895,6 +942,22 @@ export class SnowPlowGameEngine {
       landmarks: this.landmarks.map((l) => ({ ...l })),
       gifts: this.gifts.map((g) => ({ ...g })),
     };
+  }
+
+  /**
+   * Take a high-resolution snapshot from the WebGL canvas and generate a postcard
+   */
+  public async capturePostcard(filterId: string, stampId: string, caption: string): Promise<string> {
+    // Render current frame cleanly
+    this.renderer.render(this.scene, this.camera);
+
+    return generatePostcardDataUrl({
+      sourceCanvas: this.renderer.domElement,
+      filterId,
+      stampId,
+      caption,
+      clearedPercent: this.snowClearedPercent,
+    });
   }
 
   public resetGame() {

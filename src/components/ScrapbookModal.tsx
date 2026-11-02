@@ -4,9 +4,28 @@
  * and player journey stats.
  */
 
-import React, { useState } from 'react';
-import { BookOpen, Coffee, Flower, Gift, Heart, Lock, Mail, Music, Sparkles, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import {
+  BookOpen,
+  Camera,
+  Coffee,
+  Download,
+  Flower,
+  Gift,
+  Heart,
+  Lock,
+  Mail,
+  Music,
+  Sparkles,
+  Trash2,
+  X,
+} from 'lucide-react';
 import { LANDMARKS, ROMANTIC_GIFTS, type Landmark, type RomanticGift } from '../game/constants';
+import {
+  deletePostcardFromStorage,
+  loadSavedPostcards,
+  type SavedPostcard,
+} from '../game/storage';
 
 interface ScrapbookModalProps {
   unlockedGifts: RomanticGift[];
@@ -14,6 +33,7 @@ interface ScrapbookModalProps {
   highestCombo: number;
   totalLetters: number;
   onClose: () => void;
+  onOpenPhotoMode?: () => void;
 }
 
 export const ScrapbookModal: React.FC<ScrapbookModalProps> = ({
@@ -22,8 +42,32 @@ export const ScrapbookModal: React.FC<ScrapbookModalProps> = ({
   highestCombo,
   totalLetters,
   onClose,
+  onOpenPhotoMode,
 }) => {
-  const [activeTab, setActiveTab] = useState<'gifts' | 'couples'>('gifts');
+  const [activeTab, setActiveTab] = useState<'gifts' | 'couples' | 'postcards'>('gifts');
+  const [postcards, setPostcards] = useState<SavedPostcard[]>(() => loadSavedPostcards());
+  const [selectedPostcard, setSelectedPostcard] = useState<SavedPostcard | null>(null);
+
+  useEffect(() => {
+    setPostcards(loadSavedPostcards());
+  }, [activeTab]);
+
+  const handleDeletePostcard = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const updated = deletePostcardFromStorage(id);
+    setPostcards(updated);
+    if (selectedPostcard?.id === id) {
+      setSelectedPostcard(null);
+    }
+  };
+
+  const handleDownloadPostcard = (pc: SavedPostcard, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    const a = document.createElement('a');
+    a.href = pc.imageDataUrl;
+    a.download = `snowbound-postcard-${pc.id}.png`;
+    a.click();
+  };
 
   const getGiftIcon = (iconName: string) => {
     switch (iconName) {
@@ -100,6 +144,18 @@ export const ScrapbookModal: React.FC<ScrapbookModalProps> = ({
             >
               <Heart className="w-3.5 h-3.5" />
               <span>Reunited Couples ({reunitedCount}/{LANDMARKS.length})</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('postcards')}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer ${
+                activeTab === 'postcards'
+                  ? 'bg-rose-600 text-white shadow-md'
+                  : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Camera className="w-3.5 h-3.5" />
+              <span>Holiday Postcards ({postcards.length})</span>
             </button>
           </div>
 
@@ -230,10 +286,128 @@ export const ScrapbookModal: React.FC<ScrapbookModalProps> = ({
               })}
             </div>
           )}
+
+          {activeTab === 'postcards' && (
+            <div className="flex flex-col gap-4">
+              {postcards.length === 0 ? (
+                <div className="flex flex-col items-center justify-center p-12 text-center border border-dashed border-slate-800 rounded-2xl bg-slate-900/40">
+                  <Camera className="w-12 h-12 text-rose-400/60 mb-3" />
+                  <h4 className="text-sm font-semibold text-slate-200">No Postcards Snapped Yet</h4>
+                  <p className="text-xs text-slate-400 max-w-sm mt-1 mb-4">
+                    Press <span className="font-mono text-rose-300 font-bold">[P]</span> during gameplay to enter Solstice Photo Mode and create souvenir postcards.
+                  </p>
+                  {onOpenPhotoMode && (
+                    <button
+                      onClick={() => {
+                        onClose();
+                        onOpenPhotoMode();
+                      }}
+                      className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold flex items-center gap-2 shadow-md cursor-pointer"
+                    >
+                      <Camera className="w-3.5 h-3.5" />
+                      <span>Open Solstice Camera</span>
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                  {postcards.map((pc) => (
+                    <div
+                      key={pc.id}
+                      onClick={() => setSelectedPostcard(pc)}
+                      className="group relative rounded-xl overflow-hidden border border-slate-700/80 bg-slate-800/80 hover:border-rose-500/60 transition-all cursor-pointer shadow-md"
+                    >
+                      <img
+                        src={pc.imageDataUrl}
+                        alt="Saved Postcard"
+                        className="w-full aspect-[3/2] object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                      <div className="p-2.5 flex flex-col gap-1">
+                        <p className="text-xs font-medium text-slate-200 truncate italic">
+                          {pc.caption}
+                        </p>
+                        <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-slate-700/60">
+                          <span className="font-mono text-cyan-300">{pc.clearedPercent}% Plowed</span>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              onClick={(e) => handleDownloadPostcard(pc, e)}
+                              className="p-1 rounded hover:bg-slate-700 text-slate-300 hover:text-white"
+                              title="Download"
+                            >
+                              <Download className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={(e) => handleDeletePostcard(pc.id, e)}
+                              className="p-1 rounded hover:bg-rose-950/80 text-rose-400"
+                              title="Delete"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
+        {/* Selected Postcard Fullscreen Lightbox Modal */}
+        {selectedPostcard && (
+          <div
+            onClick={() => setSelectedPostcard(null)}
+            className="absolute inset-0 bg-black/90 z-50 flex items-center justify-center p-6 cursor-pointer"
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="relative max-w-4xl w-full flex flex-col items-center gap-3 bg-slate-900 border border-slate-700 rounded-2xl p-4 shadow-2xl"
+            >
+              <img
+                src={selectedPostcard.imageDataUrl}
+                alt="Enlarged Postcard"
+                className="max-h-[70vh] w-auto object-contain rounded-lg shadow-lg"
+              />
+              <div className="w-full flex items-center justify-between text-xs text-slate-300 pt-2 border-t border-slate-800">
+                <span className="italic text-rose-200">{selectedPostcard.caption}</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleDownloadPostcard(selectedPostcard)}
+                    className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-semibold flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Download PNG</span>
+                  </button>
+                  <button
+                    onClick={() => setSelectedPostcard(null)}
+                    className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Footer */}
-        <div className="pt-3 border-t border-slate-800 flex justify-end">
+        <div className="pt-3 border-t border-slate-800 flex justify-between items-center">
+          {onOpenPhotoMode ? (
+            <button
+              onClick={() => {
+                onClose();
+                onOpenPhotoMode();
+              }}
+              className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-rose-300 flex items-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <Camera className="w-3.5 h-3.5 text-rose-400" />
+              <span>Take Postcard [P]</span>
+            </button>
+          ) : (
+            <div />
+          )}
+
           <button
             onClick={onClose}
             className="px-6 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm font-semibold text-slate-200 transition-colors cursor-pointer"

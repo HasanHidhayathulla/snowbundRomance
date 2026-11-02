@@ -19,10 +19,13 @@ import {
   type RomanticGift,
 } from './constants';
 import {
-  loadGameProgress,
-  saveGameProgress,
   loadGameSettings,
   type SolsticeAtmosphere,
+} from './storage';
+import {
+  loadGameProgress,
+  saveGameProgress,
+  type PersistentProgress,
 } from './storage';
 import {
   createChalet,
@@ -153,19 +156,8 @@ export class SnowPlowGameEngine {
     this.container = container;
     this.onHUDUpdate = onHUDUpdate || null;
 
-    // Load saved progress
-    const saved = loadGameProgress();
-    this.loveLetters = saved.loveLetters || 20;
-    this.upgrades = { ...this.upgrades, ...saved.upgrades };
-    this.unlockedAchievementIds = [...(saved.unlockedAchievementIds || [])];
-
-    // Load saved settings
-    const settings = loadGameSettings();
-    this.atmosphere = settings.atmosphere || 'twilight';
-
     this.initWebGL();
     this.initScene();
-    this.applyAtmosphere(this.atmosphere);
     this.initWorldEntities();
     this.setupEventListeners();
     this.startLoop();
@@ -438,7 +430,7 @@ export class SnowPlowGameEngine {
       if (e.code === 'KeyP') {
         if (this.gameState === 'PLAYING') {
           this.setGameState('PHOTO');
-        } else if (this.gameState === 'PHOTO' || this.gameState === 'PHOTO_MODE') {
+        } else if (this.gameState === 'PHOTO') {
           this.setGameState('PLAYING');
         }
       }
@@ -541,14 +533,6 @@ export class SnowPlowGameEngine {
         this.rimLight.intensity = 0.6;
       }
     }
-  }
-
-  public captureSnapshot(): string {
-    // Force a render pass and grab base64 image data url
-    this.renderer.render(this.scene, this.camera);
-    const dataUrl = this.renderer.domElement.toDataURL('image/png');
-    this.checkAchievement('shutterbug');
-    return dataUrl;
   }
 
   public checkAchievement(id: string) {
@@ -878,7 +862,6 @@ export class SnowPlowGameEngine {
           const currentCombo = COMBO_LEVELS[this.comboLevel - 1];
           const lettersGained = Math.round(5 * currentCombo.multiplier);
           this.loveLetters += lettersGained;
-          saveGameProgress({ loveLetters: this.loveLetters });
           this.triggerMessage(`${currentCombo.title}! Combo x${currentCombo.multiplier.toFixed(1)} (+${lettersGained} Letters)`);
         }
       }
@@ -935,11 +918,6 @@ export class SnowPlowGameEngine {
           if (collectedCount >= 3) {
             this.checkAchievement('keepsake_hunter');
           }
-
-          saveGameProgress({
-            unlockedGiftIds: this.gifts.filter((g) => g.collected).map((g) => g.id),
-            loveLetters: this.loveLetters,
-          });
 
           synthAudio.playGiftPickup();
           this.hitstopDuration = 0.06; // brief hitstop

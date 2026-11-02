@@ -219,7 +219,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 ].map((atm) => (
                   <button
                     key={atm.id}
-                    onClick={() => onUpdateSettings({ atmosphere: atm.id as GameSettings['atmosphere'] })}
+                    onClick={() => onUpdateSettings({ atmosphere: atm.id as any })}
                     className={`p-3 rounded-xl border text-left flex flex-col justify-between transition-all cursor-pointer ${
                       settings.atmosphere === atm.id
                         ? 'border-rose-500 bg-gradient-to-br shadow-lg ring-1 ring-rose-500/50 ' + atm.color

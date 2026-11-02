@@ -11,7 +11,7 @@ export interface GameSettings {
   isMuted: boolean;
   showRadar: boolean;
   radarZoom: number;    // 1.0 = standard, 1.5 = wide
-  atmosphere: SolsticeAtmosphere;
+  atmosphere?: SolsticeAtmosphere;
 }
 
 export interface SavedPostcard {
@@ -31,8 +31,6 @@ export interface PersistentProgress {
   clearedLandmarkIds: string[];
   unlockedAchievementIds: string[];
   highestCombo: number;
-  totalCellsPlowed: number;
-  postcardsCaptured: number;
   totalSnowPlowedHectares: number;
   savedPostcards?: SavedPostcard[];
 }
@@ -64,8 +62,6 @@ export const DEFAULT_PROGRESS: PersistentProgress = {
   clearedLandmarkIds: [],
   unlockedAchievementIds: [],
   highestCombo: 1,
-  totalCellsPlowed: 0,
-  postcardsCaptured: 0,
   totalSnowPlowedHectares: 0,
 };
 

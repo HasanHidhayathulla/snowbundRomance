@@ -6,17 +6,17 @@
 
 import React, { useState, useEffect } from 'react';
 import {
+  Award,
   BookOpen,
   Camera,
   Coffee,
   Download,
+  Flame,
   Flower,
   Gift,
   Heart,
   Lock,
   Mail,
-  Award,
-  Flame,
   MapPin,
   Music,
   Snowflake,
@@ -58,53 +58,9 @@ export const ScrapbookModal: React.FC<ScrapbookModalProps> = ({
   onClose,
   onOpenPhotoMode,
 }) => {
-  const [activeTab, setActiveTab] = useState<'gifts' | 'couples' | 'achievements' | 'postcards'>('gifts');
+  const [activeTab, setActiveTab] = useState<'gifts' | 'couples' | 'postcards' | 'achievements'>('gifts');
   const [postcards, setPostcards] = useState<SavedPostcard[]>(() => loadSavedPostcards());
   const [selectedPostcard, setSelectedPostcard] = useState<SavedPostcard | null>(null);
-
-  useEffect(() => {
-    setPostcards(loadSavedPostcards());
-  }, [activeTab]);
-
-  const handleDeletePostcard = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    const updated = deletePostcardFromStorage(id);
-    setPostcards(updated);
-    if (selectedPostcard?.id === id) {
-      setSelectedPostcard(null);
-    }
-  };
-
-  const getSafePostcardImageUrl = (url: string): string | null => {
-    return /^data:image\/(?:png|jpeg|jpg|webp);base64,[a-z0-9+/=]+$/i.test(url) ? url : null;
-  };
-
-  const handleDownloadPostcard = (pc: SavedPostcard, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
-    const safeUrl = getSafePostcardImageUrl(pc.imageDataUrl);
-    if (!safeUrl) return;
-    const a = document.createElement('a');
-    a.href = safeUrl;
-    a.download = `snowbound-postcard-${pc.id}.png`;
-    a.click();
-  };
-
-  const getGiftIcon = (iconName: string) => {
-    switch (iconName) {
-      case 'Coffee':
-        return <Coffee className="w-5 h-5 text-amber-400" />;
-      case 'Music':
-        return <Music className="w-5 h-5 text-purple-400" />;
-      case 'Lock':
-        return <Lock className="w-5 h-5 text-cyan-400" />;
-      case 'Mail':
-        return <Mail className="w-5 h-5 text-rose-400" />;
-      case 'Flower':
-        return <Flower className="w-5 h-5 text-pink-400" />;
-      default:
-        return <Gift className="w-5 h-5 text-amber-300" />;
-    }
-  };
 
   const getAchievementIcon = (iconName: string) => {
     switch (iconName) {
@@ -131,9 +87,46 @@ export const ScrapbookModal: React.FC<ScrapbookModalProps> = ({
     }
   };
 
+  useEffect(() => {
+    setPostcards(loadSavedPostcards());
+  }, [activeTab]);
+
+  const handleDeletePostcard = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const updated = deletePostcardFromStorage(id);
+    setPostcards(updated);
+    if (selectedPostcard?.id === id) {
+      setSelectedPostcard(null);
+    }
+  };
+
+  const handleDownloadPostcard = (pc: SavedPostcard, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    const a = document.createElement('a');
+    a.href = pc.imageDataUrl;
+    a.download = `snowbound-postcard-${pc.id}.png`;
+    a.click();
+  };
+
+  const getGiftIcon = (iconName: string) => {
+    switch (iconName) {
+      case 'Coffee':
+        return <Coffee className="w-5 h-5 text-amber-400" />;
+      case 'Music':
+        return <Music className="w-5 h-5 text-purple-400" />;
+      case 'Lock':
+        return <Lock className="w-5 h-5 text-cyan-400" />;
+      case 'Mail':
+        return <Mail className="w-5 h-5 text-rose-400" />;
+      case 'Flower':
+        return <Flower className="w-5 h-5 text-pink-400" />;
+      default:
+        return <Gift className="w-5 h-5 text-amber-300" />;
+    }
+  };
+
   const collectedCount = unlockedGifts.filter((g) => g.collected).length;
   const reunitedCount = clearedLandmarks.filter((l) => l.cleared).length;
-  const achievementsCount = unlockedAchievementIds.length;
 
   return (
     <div className="absolute inset-0 flex items-center justify-center p-4 bg-slate-950/80 z-40 select-none">
@@ -193,18 +186,6 @@ export const ScrapbookModal: React.FC<ScrapbookModalProps> = ({
             </button>
 
             <button
-              onClick={() => setActiveTab('achievements')}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer ${
-                activeTab === 'achievements'
-                  ? 'bg-rose-600 text-white shadow-md'
-                  : 'bg-slate-800 text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <Award className="w-3.5 h-3.5" />
-              <span>Milestones ({achievementsCount}/{ACHIEVEMENTS.length})</span>
-            </button>
-
-            <button
               onClick={() => setActiveTab('postcards')}
               className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer ${
                 activeTab === 'postcards'
@@ -214,6 +195,18 @@ export const ScrapbookModal: React.FC<ScrapbookModalProps> = ({
             >
               <Camera className="w-3.5 h-3.5" />
               <span>Holiday Postcards ({postcards.length})</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('achievements')}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer ${
+                activeTab === 'achievements'
+                  ? 'bg-rose-600 text-white shadow-md'
+                  : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Award className="w-3.5 h-3.5" />
+              <span>Milestones ({unlockedAchievementIds.length}/{ACHIEVEMENTS.length})</span>
             </button>
           </div>
 
@@ -427,47 +420,43 @@ export const ScrapbookModal: React.FC<ScrapbookModalProps> = ({
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                  {postcards.map((pc) => {
-                    const safeImageUrl = getSafePostcardImageUrl(pc.imageDataUrl);
-                    if (!safeImageUrl) return null;
-                    return (
-                      <div
-                        key={pc.id}
-                        onClick={() => setSelectedPostcard(pc)}
-                        className="group relative rounded-xl overflow-hidden border border-slate-700/80 bg-slate-800/80 hover:border-rose-500/60 transition-all cursor-pointer shadow-md"
-                      >
-                        <img
-                          src={safeImageUrl}
-                          alt="Saved Postcard"
-                          className="w-full aspect-[3/2] object-cover group-hover:scale-105 transition-transform duration-300"
-                        />
-                        <div className="p-2.5 flex flex-col gap-1">
-                          <p className="text-xs font-medium text-slate-200 truncate italic">
-                            {pc.caption}
-                          </p>
-                          <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-slate-700/60">
-                            <span className="font-mono text-cyan-300">{pc.clearedPercent}% Plowed</span>
-                            <div className="flex items-center gap-1.5">
-                              <button
-                                onClick={(e) => handleDownloadPostcard(pc, e)}
-                                className="p-1 rounded hover:bg-slate-700 text-slate-300 hover:text-white"
-                                title="Download"
-                              >
-                                <Download className="w-3.5 h-3.5" />
-                              </button>
-                              <button
-                                onClick={(e) => handleDeletePostcard(pc.id, e)}
-                                className="p-1 rounded hover:bg-rose-950/80 text-rose-400"
-                                title="Delete"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
+                  {postcards.map((pc) => (
+                    <div
+                      key={pc.id}
+                      onClick={() => setSelectedPostcard(pc)}
+                      className="group relative rounded-xl overflow-hidden border border-slate-700/80 bg-slate-800/80 hover:border-rose-500/60 transition-all cursor-pointer shadow-md"
+                    >
+                      <img
+                        src={pc.imageDataUrl}
+                        alt="Saved Postcard"
+                        className="w-full aspect-[3/2] object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                      <div className="p-2.5 flex flex-col gap-1">
+                        <p className="text-xs font-medium text-slate-200 truncate italic">
+                          {pc.caption}
+                        </p>
+                        <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-slate-700/60">
+                          <span className="font-mono text-cyan-300">{pc.clearedPercent}% Plowed</span>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              onClick={(e) => handleDownloadPostcard(pc, e)}
+                              className="p-1 rounded hover:bg-slate-700 text-slate-300 hover:text-white"
+                              title="Download"
+                            >
+                              <Download className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={(e) => handleDeletePostcard(pc.id, e)}
+                              className="p-1 rounded hover:bg-rose-950/80 text-rose-400"
+                              title="Delete"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
                           </div>
                         </div>
                       </div>
-                    );
-                  })}
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
@@ -475,7 +464,7 @@ export const ScrapbookModal: React.FC<ScrapbookModalProps> = ({
         </div>
 
         {/* Selected Postcard Fullscreen Lightbox Modal */}
-        {selectedPostcard && getSafePostcardImageUrl(selectedPostcard.imageDataUrl) && (
+        {selectedPostcard && (
           <div
             onClick={() => setSelectedPostcard(null)}
             className="absolute inset-0 bg-black/90 z-50 flex items-center justify-center p-6 cursor-pointer"
@@ -485,7 +474,7 @@ export const ScrapbookModal: React.FC<ScrapbookModalProps> = ({
               className="relative max-w-4xl w-full flex flex-col items-center gap-3 bg-slate-900 border border-slate-700 rounded-2xl p-4 shadow-2xl"
             >
               <img
-                src={getSafePostcardImageUrl(selectedPostcard.imageDataUrl)!}
+                src={selectedPostcard.imageDataUrl}
                 alt="Enlarged Postcard"
                 className="max-h-[70vh] w-auto object-contain rounded-lg shadow-lg"
               />

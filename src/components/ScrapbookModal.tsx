@@ -5,12 +5,37 @@
  */
 
 import React, { useState } from 'react';
-import { BookOpen, Coffee, Flower, Gift, Heart, Lock, Mail, Music, Sparkles, X } from 'lucide-react';
-import { LANDMARKS, ROMANTIC_GIFTS, type Landmark, type RomanticGift } from '../game/constants';
+import {
+  Award,
+  BookOpen,
+  Camera,
+  Coffee,
+  Flame,
+  Flower,
+  Gift,
+  Heart,
+  Lock,
+  Mail,
+  MapPin,
+  Music,
+  Snowflake,
+  Sparkles,
+  Wrench,
+  X,
+  Zap,
+} from 'lucide-react';
+import {
+  ACHIEVEMENTS,
+  LANDMARKS,
+  ROMANTIC_GIFTS,
+  type Landmark,
+  type RomanticGift,
+} from '../game/constants';
 
 interface ScrapbookModalProps {
   unlockedGifts: RomanticGift[];
   clearedLandmarks: Landmark[];
+  unlockedAchievementIds?: string[];
   highestCombo: number;
   totalLetters: number;
   onClose: () => void;
@@ -19,11 +44,12 @@ interface ScrapbookModalProps {
 export const ScrapbookModal: React.FC<ScrapbookModalProps> = ({
   unlockedGifts,
   clearedLandmarks,
+  unlockedAchievementIds = [],
   highestCombo,
   totalLetters,
   onClose,
 }) => {
-  const [activeTab, setActiveTab] = useState<'gifts' | 'couples'>('gifts');
+  const [activeTab, setActiveTab] = useState<'gifts' | 'couples' | 'achievements'>('gifts');
 
   const getGiftIcon = (iconName: string) => {
     switch (iconName) {
@@ -42,8 +68,34 @@ export const ScrapbookModal: React.FC<ScrapbookModalProps> = ({
     }
   };
 
+  const getAchievementIcon = (iconName: string) => {
+    switch (iconName) {
+      case 'Snowflake':
+        return <Snowflake className="w-5 h-5 text-cyan-400" />;
+      case 'Zap':
+        return <Zap className="w-5 h-5 text-amber-400" />;
+      case 'Flame':
+        return <Flame className="w-5 h-5 text-orange-400" />;
+      case 'Heart':
+        return <Heart className="w-5 h-5 text-rose-500 fill-rose-500" />;
+      case 'Gift':
+        return <Gift className="w-5 h-5 text-pink-400" />;
+      case 'MapPin':
+        return <MapPin className="w-5 h-5 text-emerald-400" />;
+      case 'Wrench':
+        return <Wrench className="w-5 h-5 text-yellow-400" />;
+      case 'Camera':
+        return <Camera className="w-5 h-5 text-purple-400" />;
+      case 'Sparkles':
+        return <Sparkles className="w-5 h-5 text-rose-400" />;
+      default:
+        return <Award className="w-5 h-5 text-amber-400" />;
+    }
+  };
+
   const collectedCount = unlockedGifts.filter((g) => g.collected).length;
   const reunitedCount = clearedLandmarks.filter((l) => l.cleared).length;
+  const achievementsCount = unlockedAchievementIds.length;
 
   return (
     <div className="absolute inset-0 flex items-center justify-center p-4 bg-slate-950/80 z-40 select-none">
@@ -101,6 +153,18 @@ export const ScrapbookModal: React.FC<ScrapbookModalProps> = ({
               <Heart className="w-3.5 h-3.5" />
               <span>Reunited Couples ({reunitedCount}/{LANDMARKS.length})</span>
             </button>
+
+            <button
+              onClick={() => setActiveTab('achievements')}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer ${
+                activeTab === 'achievements'
+                  ? 'bg-rose-600 text-white shadow-md'
+                  : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Award className="w-3.5 h-3.5" />
+              <span>Milestones ({achievementsCount}/{ACHIEVEMENTS.length})</span>
+            </button>
           </div>
 
           <div className="flex items-center gap-3 text-xs text-slate-300">
@@ -113,6 +177,64 @@ export const ScrapbookModal: React.FC<ScrapbookModalProps> = ({
 
         {/* Content Body */}
         <div className="flex-1 overflow-y-auto py-4">
+          {activeTab === 'achievements' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+              {ACHIEVEMENTS.map((ach) => {
+                const isUnlocked = unlockedAchievementIds.includes(ach.id);
+                return (
+                  <div
+                    key={ach.id}
+                    className={`p-4 rounded-xl border transition-all ${
+                      isUnlocked
+                        ? 'bg-slate-800/90 border-amber-500/50 shadow-sm'
+                        : 'bg-slate-900/40 border-slate-800 text-slate-500'
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div
+                        className={`p-2.5 rounded-lg border ${
+                          isUnlocked
+                            ? 'bg-slate-900 border-amber-600/60 text-amber-300'
+                            : 'bg-slate-950/60 border-slate-800 text-slate-600'
+                        }`}
+                      >
+                        {isUnlocked ? (
+                          getAchievementIcon(ach.icon)
+                        ) : (
+                          <Lock className="w-5 h-5 text-slate-600" />
+                        )}
+                      </div>
+
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <h4
+                            className={`font-semibold text-sm ${
+                              isUnlocked ? 'text-slate-100' : 'text-slate-500'
+                            }`}
+                          >
+                            {ach.title}
+                          </h4>
+                          <span
+                            className={`text-[10px] px-2 py-0.5 rounded-full font-mono ${
+                              isUnlocked
+                                ? 'bg-amber-950/80 text-amber-300 border border-amber-800/40'
+                                : 'bg-slate-800 text-slate-500 border border-slate-700'
+                            }`}
+                          >
+                            +{ach.rewardLetters} Letters
+                          </span>
+                        </div>
+
+                        <p className="text-xs text-slate-300 mt-1.5 leading-relaxed">
+                          {ach.description}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
           {activeTab === 'gifts' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
               {ROMANTIC_GIFTS.map((g) => {

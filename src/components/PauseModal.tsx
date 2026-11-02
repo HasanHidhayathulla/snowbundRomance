@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { BookOpen, Play, RotateCcw, Settings, Volume2, VolumeX, Wrench } from 'lucide-react';
+import { BookOpen, Camera, Play, RotateCcw, Settings, Volume2, VolumeX, Wrench } from 'lucide-react';
 
 interface PauseModalProps {
   onResume: () => void;
@@ -11,6 +11,7 @@ interface PauseModalProps {
   onOpenWorkshop: () => void;
   onOpenScrapbook: () => void;
   onOpenSettings: () => void;
+  onPhotoMode: () => void;
   isMuted: boolean;
   onToggleMute: () => void;
   isMusicEnabled: boolean;
@@ -23,6 +24,7 @@ export const PauseModal: React.FC<PauseModalProps> = ({
   onOpenWorkshop,
   onOpenScrapbook,
   onOpenSettings,
+  onPhotoMode,
   isMuted,
   onToggleMute,
   isMusicEnabled,
@@ -47,6 +49,14 @@ export const PauseModal: React.FC<PauseModalProps> = ({
           </button>
 
           <button
+            onClick={onPhotoMode}
+            className="w-full py-2.5 px-4 rounded-xl bg-purple-950/70 hover:bg-purple-900/80 text-purple-200 font-medium flex items-center justify-center gap-2 border border-purple-800/60 transition-colors cursor-pointer"
+          >
+            <Camera className="w-4 h-4 text-purple-400" />
+            <span>Solstice Postcard Photo Studio (P)</span>
+          </button>
+
+          <button
             onClick={onOpenWorkshop}
             className="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium flex items-center justify-center gap-2 border border-slate-700 transition-colors cursor-pointer"
           >
@@ -66,8 +76,8 @@ export const PauseModal: React.FC<PauseModalProps> = ({
             onClick={onOpenSettings}
             className="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium flex items-center justify-center gap-2 border border-slate-700 transition-colors cursor-pointer"
           >
-            <Settings className="w-4 h-4 text-purple-400" />
-            <span>Sound & Minimap Settings</span>
+            <Settings className="w-4 h-4 text-slate-300" />
+            <span>Preferences & Skies</span>
           </button>
 
           <button

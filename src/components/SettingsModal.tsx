@@ -129,6 +129,33 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </div>
         </div>
 
+        {/* Atmosphere & Sky Mood */}
+        <div className="flex flex-col gap-3 pt-3 border-t border-slate-800">
+          <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+            Solstice Atmosphere & Skies
+          </h4>
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { id: 'twilight', label: 'Twilight Dusk', desc: 'Cozy navy & amethyst', color: 'from-blue-900 to-indigo-950' },
+              { id: 'golden', label: 'Golden Hearth', desc: 'Warm amber solstice sun', color: 'from-amber-900 to-orange-950' },
+              { id: 'aurora', label: 'Aurora Lights', desc: 'Glowing emerald & violet', color: 'from-emerald-950 to-purple-950' },
+            ].map((atm) => (
+              <button
+                key={atm.id}
+                onClick={() => onUpdateSettings({ atmosphere: atm.id as any })}
+                className={`p-3 rounded-xl border text-left flex flex-col justify-between transition-all cursor-pointer ${
+                  settings.atmosphere === atm.id
+                    ? 'border-rose-500 bg-gradient-to-br shadow-lg ring-1 ring-rose-500/50 ' + atm.color
+                    : 'border-slate-800 bg-slate-800/40 hover:border-slate-700'
+                }`}
+              >
+                <div className="text-xs font-bold text-white mb-0.5">{atm.label}</div>
+                <div className="text-[10px] text-slate-400">{atm.desc}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Display & Radar Toggles */}
         <div className="flex flex-col gap-3 pt-3 border-t border-slate-800">
           <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400">

@@ -7,6 +7,7 @@
 import React, { useState } from 'react';
 import {
   BookOpen,
+  Camera,
   ChevronDown,
   ChevronUp,
   Compass,
@@ -31,6 +32,7 @@ interface GameHUDProps {
   onOpenWorkshop: () => void;
   onOpenScrapbook: () => void;
   onOpenSettings: () => void;
+  onPhotoMode: () => void;
   onPause: () => void;
   isMuted: boolean;
   onToggleMute: () => void;
@@ -43,6 +45,7 @@ export const GameHUD: React.FC<GameHUDProps> = ({
   onOpenWorkshop,
   onOpenScrapbook,
   onOpenSettings,
+  onPhotoMode,
   onPause,
   isMuted,
   onToggleMute,
@@ -165,6 +168,17 @@ export const GameHUD: React.FC<GameHUDProps> = ({
           >
             <BookOpen className="w-4 h-4 text-rose-400" />
             <span className="hidden md:inline">Log</span>
+          </button>
+
+          {/* Postcard Photo Studio */}
+          <button
+            onClick={onPhotoMode}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-800 text-xs font-semibold text-purple-300 shadow-md transition-colors cursor-pointer"
+            title="Solstice Postcard Photo Mode (P)"
+          >
+            <Camera className="w-4 h-4 text-purple-400" />
+            <span className="hidden lg:inline">Photo</span>
+            <span className="font-mono text-[10px] text-purple-400">[P]</span>
           </button>
 
           {/* Audio Preferences */}

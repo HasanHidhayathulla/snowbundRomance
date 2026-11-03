@@ -25,6 +25,12 @@ export interface RadarGift {
   revealed: boolean;
 }
 
+export interface RadarQuestWaypoint {
+  x: number;
+  z: number;
+  title: string;
+}
+
 interface VillageRadarProps {
   playerX: number;
   playerZ: number;
@@ -32,6 +38,7 @@ interface VillageRadarProps {
   landmarks: RadarLandmark[];
   gifts: RadarGift[];
   snowClearedPercent: number;
+  questWaypoint?: RadarQuestWaypoint | null;
 }
 
 export const VillageRadar: React.FC<VillageRadarProps> = ({
@@ -41,6 +48,7 @@ export const VillageRadar: React.FC<VillageRadarProps> = ({
   landmarks,
   gifts,
   snowClearedPercent,
+  questWaypoint,
 }) => {
   const [isMinimized, setIsMinimized] = useState(false);
 
@@ -135,6 +143,17 @@ export const VillageRadar: React.FC<VillageRadarProps> = ({
             );
           })}
 
+          {/* Quest Waypoint Pin (Glowing Pulsing Gold) */}
+          {questWaypoint && (
+            <g transform={`translate(${mapToPercent(questWaypoint.x)}, ${mapToPercent(questWaypoint.z)})`}>
+              <circle r="6" fill="#fbbf24" opacity="0.35">
+                <animate attributeName="r" values="4;8;4" dur="1.6s" repeatCount="indefinite" />
+                <animate attributeName="opacity" values="0.6;0.1;0.6" dur="1.6s" repeatCount="indefinite" />
+              </circle>
+              <polygon points="0,-6 5,4 -5,4" fill="#fbbf24" stroke="#78350f" strokeWidth="0.8" />
+            </g>
+          )}
+
           {/* Collectible Gifts */}
           {gifts.map((g) => {
             if (g.collected) return null;
@@ -169,10 +188,17 @@ export const VillageRadar: React.FC<VillageRadarProps> = ({
           <span className="w-2 h-2 rounded-sm bg-sky-400 inline-block" />
           Landmark
         </span>
-        <span className="flex items-center gap-1">
-          <span className="w-2 h-2 rounded-full bg-rose-500 inline-block" />
-          Reunited
-        </span>
+        {questWaypoint ? (
+          <span className="flex items-center gap-1 text-amber-300 font-semibold">
+            <span className="w-2 h-2 rounded-full bg-amber-400 inline-block animate-pulse" />
+            Waypoint
+          </span>
+        ) : (
+          <span className="flex items-center gap-1">
+            <span className="w-2 h-2 rounded-full bg-rose-500 inline-block" />
+            Reunited
+          </span>
+        )}
         <span className="flex items-center gap-1">
           <span className="w-2 h-2 rounded-full bg-amber-400 inline-block" />
           Gift

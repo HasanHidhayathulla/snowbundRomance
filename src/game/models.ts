@@ -124,7 +124,7 @@ export const materials = {
  * Creates the Hero Snowplow Tractor ("The Heartplow")
  * 12-part procedural composite model
  */
-export function createHeartPlowTractor(): {
+export interface HeartPlowTractorParts {
   group: THREE.Group;
   plowGroup: THREE.Group;
   wheelsFront: THREE.Group[];
@@ -132,9 +132,21 @@ export function createHeartPlowTractor(): {
   exhaustStack: THREE.Mesh;
   headlightL: THREE.SpotLight;
   headlightR: THREE.SpotLight;
-} {
+  hoodMesh: THREE.Mesh;
+  roofMesh: THREE.Mesh;
+  grilleMesh: THREE.Mesh;
+  exhaustCap: THREE.Mesh;
+  applyLivery: (bodyColor: number, roofColor: number, trimColor: number) => void;
+}
+
+export function createHeartPlowTractor(): HeartPlowTractorParts {
   const group = new THREE.Group();
   group.name = 'HeartPlow';
+
+  // Clone materials for tractor body parts so instances or liveries don't mutate shared materials
+  const bodyMat = materials.tractorPaint.clone();
+  const roofMat = materials.tractorCabinRoof.clone();
+  const trimMat = materials.tractorGoldTrim.clone();
 
   // 1. Lower Chassis Frame (Heavy iron undercarriage)
   const chassisGeo = new THREE.BoxGeometry(1.4, 0.45, 2.6);
@@ -144,9 +156,9 @@ export function createHeartPlowTractor(): {
   chassisMesh.receiveShadow = true;
   group.add(chassisMesh);
 
-  // 2. Engine Hood (Crimson curved hood)
+  // 2. Engine Hood (Curved hood)
   const hoodGeo = new THREE.BoxGeometry(1.2, 0.7, 1.4);
-  const hoodMesh = new THREE.Mesh(hoodGeo, materials.tractorPaint);
+  const hoodMesh = new THREE.Mesh(hoodGeo, bodyMat);
   hoodMesh.position.set(0, 0.85, 0.6);
   hoodMesh.castShadow = true;
   hoodMesh.receiveShadow = true;
@@ -154,7 +166,7 @@ export function createHeartPlowTractor(): {
 
   // 3. Vintage Brass Front Grille
   const grilleGeo = new THREE.BoxGeometry(1.1, 0.6, 0.1);
-  const grilleMesh = new THREE.Mesh(grilleGeo, materials.tractorGoldTrim);
+  const grilleMesh = new THREE.Mesh(grilleGeo, trimMat);
   grilleMesh.position.set(0, 0.85, 1.35);
   group.add(grilleMesh);
 
@@ -167,7 +179,7 @@ export function createHeartPlowTractor(): {
 
   // 5. Alpine Slanted Cabin Roof with snow rim
   const roofGeo = new THREE.BoxGeometry(1.4, 0.2, 1.25);
-  const roofMesh = new THREE.Mesh(roofGeo, materials.tractorCabinRoof);
+  const roofMesh = new THREE.Mesh(roofGeo, roofMat);
   roofMesh.position.set(0, 1.88, -0.45);
   roofMesh.castShadow = true;
   group.add(roofMesh);
@@ -208,7 +220,7 @@ export function createHeartPlowTractor(): {
   group.add(exhaustStack);
 
   const exhaustCapGeo = new THREE.CylinderGeometry(0.12, 0.08, 0.15, 10);
-  const exhaustCap = new THREE.Mesh(exhaustCapGeo, materials.tractorGoldTrim);
+  const exhaustCap = new THREE.Mesh(exhaustCapGeo, trimMat);
   exhaustCap.position.set(0.45, 1.78, 0.8);
   group.add(exhaustCap);
 
@@ -342,6 +354,12 @@ export function createHeartPlowTractor(): {
   const headlightL = createHeadlamp(-0.48);
   const headlightR = createHeadlamp(0.48);
 
+  const applyLivery = (bodyColor: number, roofColor: number, trimColor: number) => {
+    bodyMat.color.setHex(bodyColor);
+    roofMat.color.setHex(roofColor);
+    trimMat.color.setHex(trimColor);
+  };
+
   return {
     group,
     plowGroup,
@@ -350,6 +368,11 @@ export function createHeartPlowTractor(): {
     exhaustStack,
     headlightL,
     headlightR,
+    hoodMesh,
+    roofMesh,
+    grilleMesh,
+    exhaustCap,
+    applyLivery,
   };
 }
 

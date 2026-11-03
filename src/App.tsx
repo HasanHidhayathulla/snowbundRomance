@@ -12,6 +12,7 @@ import { PhotoModeModal } from './components/PhotoModeModal';
 import { ScrapbookModal } from './components/ScrapbookModal';
 import { SettingsModal } from './components/SettingsModal';
 import { ShopModal } from './components/ShopModal';
+import { QuestModal } from './components/QuestModal';
 import { TitleScreen } from './components/TitleScreen';
 import { VictoryModal } from './components/VictoryModal';
 import { ACHIEVEMENTS, LANDMARKS, ROMANTIC_GIFTS } from './game/constants';
@@ -66,6 +67,12 @@ export default function App() {
     },
     unlockedAchievementIds: [],
     atmosphere: settings.atmosphere || 'twilight',
+    activeQuest: null,
+    questTimeRemainingSec: 0,
+    questTargetDistance: 0,
+    completedQuestIds: [],
+    selectedLiveryId: 'crimson_valentine',
+    unlockedLiveryIds: ['crimson_valentine'],
   });
 
   useEffect(() => {
@@ -135,6 +142,30 @@ export default function App() {
   const handleOpenWorkshop = () => {
     if (engineRef.current) {
       engineRef.current.setGameState('GARAGE');
+    }
+  };
+
+  const handleOpenQuests = () => {
+    if (engineRef.current) {
+      engineRef.current.setGameState('QUESTS');
+    }
+  };
+
+  const handleAcceptQuest = (questId: string) => {
+    if (engineRef.current) {
+      engineRef.current.startQuest(questId);
+    }
+  };
+
+  const handleCancelQuest = () => {
+    if (engineRef.current) {
+      engineRef.current.cancelActiveQuest();
+    }
+  };
+
+  const handleSelectLivery = (liveryId: string) => {
+    if (engineRef.current) {
+      engineRef.current.purchaseLivery(liveryId);
     }
   };
 
@@ -229,6 +260,7 @@ export default function App() {
           onOpenScrapbook={handleOpenScrapbook}
           onOpenPhotoMode={handleOpenPhotoMode}
           onOpenSettings={handleOpenSettings}
+          onOpenQuests={handleOpenQuests}
           onPhotoMode={handlePhotoMode}
           onPause={handlePause}
           isMuted={settings.isMuted}
@@ -245,10 +277,25 @@ export default function App() {
           upgrades={stats.upgrades}
           onBuyUpgrade={handleBuyUpgrade}
           onClose={handleResume}
+          selectedLiveryId={stats.selectedLiveryId}
+          unlockedLiveryIds={stats.unlockedLiveryIds}
+          onSelectLivery={handleSelectLivery}
         />
       )}
 
-      {/* 5. Pause Modal */}
+      {/* 5. Village Dispatch Quests Modal */}
+      {stats.gameState === 'QUESTS' && (
+        <QuestModal
+          activeQuest={stats.activeQuest}
+          completedQuestIds={stats.completedQuestIds}
+          loveLetters={stats.loveLetters}
+          onAcceptQuest={handleAcceptQuest}
+          onCancelQuest={handleCancelQuest}
+          onClose={handleResume}
+        />
+      )}
+
+      {/* 6. Pause Modal */}
       {stats.gameState === 'PAUSED' && (
         <PauseModal
           onResume={handleResume}
@@ -257,7 +304,7 @@ export default function App() {
           onOpenScrapbook={handleOpenScrapbook}
           onOpenPhotoMode={handleOpenPhotoMode}
           onOpenSettings={handleOpenSettings}
-          onPhotoMode={handlePhotoMode}
+          onOpenQuests={handleOpenQuests}
           isMuted={settings.isMuted}
           onToggleMute={handleToggleMute}
           isMusicEnabled={isMusicEnabled}

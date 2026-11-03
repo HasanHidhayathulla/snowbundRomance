@@ -34,6 +34,10 @@ export interface PersistentProgress {
   totalCellsPlowed: number;
   postcardsCaptured: number;
   totalSnowPlowedHectares: number;
+  activeQuestId?: string | null;
+  completedQuestIds?: string[];
+  selectedLiveryId?: string;
+  unlockedLiveryIds?: string[];
   savedPostcards?: SavedPostcard[];
 }
 
@@ -67,6 +71,10 @@ export const DEFAULT_PROGRESS: PersistentProgress = {
   totalCellsPlowed: 0,
   postcardsCaptured: 0,
   totalSnowPlowedHectares: 0,
+  activeQuestId: null,
+  completedQuestIds: [],
+  selectedLiveryId: 'crimson_valentine',
+  unlockedLiveryIds: ['crimson_valentine'],
 };
 
 export function loadGameSettings(): GameSettings {

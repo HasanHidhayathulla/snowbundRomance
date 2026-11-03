@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { BookOpen, Camera, Play, RotateCcw, Settings, Volume2, VolumeX, Wrench } from 'lucide-react';
+import { BookOpen, Camera, Play, RotateCcw, Send, Settings, Volume2, VolumeX, Wrench } from 'lucide-react';
 
 interface PauseModalProps {
   onResume: () => void;
@@ -12,7 +12,7 @@ interface PauseModalProps {
   onOpenScrapbook: () => void;
   onOpenPhotoMode: () => void;
   onOpenSettings: () => void;
-  onPhotoMode: () => void;
+  onOpenQuests: () => void;
   isMuted: boolean;
   onToggleMute: () => void;
   isMusicEnabled: boolean;
@@ -26,7 +26,7 @@ export const PauseModal: React.FC<PauseModalProps> = ({
   onOpenScrapbook,
   onOpenPhotoMode,
   onOpenSettings,
-  onPhotoMode,
+  onOpenQuests,
   isMuted,
   onToggleMute,
   isMusicEnabled,
@@ -34,41 +34,41 @@ export const PauseModal: React.FC<PauseModalProps> = ({
 }) => {
   return (
     <div className="absolute inset-0 flex items-center justify-center p-4 bg-slate-950/75 z-40 select-none">
-      <div className="w-full max-w-md bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl p-6 text-slate-100 flex flex-col gap-5">
+      <div className="w-full max-w-md bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl p-6 text-slate-100 flex flex-col gap-4">
         <div className="text-center">
           <h2 className="text-xl font-bold tracking-tight text-rose-400">Plow Engine Paused</h2>
           <p className="text-xs text-slate-400 mt-1">Take a breath beside the warmth of the cabin hearth.</p>
         </div>
 
         {/* Buttons */}
-        <div className="flex flex-col gap-2.5">
+        <div className="flex flex-col gap-2">
           <button
             onClick={onResume}
-            className="w-full py-3 px-4 rounded-xl bg-rose-600 hover:bg-rose-500 font-semibold text-white flex items-center justify-center gap-2 transition-colors cursor-pointer"
+            className="w-full py-2.5 px-4 rounded-xl bg-rose-600 hover:bg-rose-500 font-semibold text-white flex items-center justify-center gap-2 transition-colors cursor-pointer"
           >
             <Play className="w-4 h-4 fill-white" />
             <span>Resume Plowing (Esc)</span>
           </button>
 
           <button
-            onClick={onPhotoMode}
-            className="w-full py-2.5 px-4 rounded-xl bg-purple-950/70 hover:bg-purple-900/80 text-purple-200 font-medium flex items-center justify-center gap-2 border border-purple-800/60 transition-colors cursor-pointer"
+            onClick={onOpenQuests}
+            className="w-full py-2 px-4 rounded-xl bg-amber-950/60 hover:bg-amber-900/70 text-amber-200 font-medium flex items-center justify-center gap-2 border border-amber-800/60 transition-colors cursor-pointer"
           >
-            <Camera className="w-4 h-4 text-purple-400" />
-            <span>Solstice Postcard Photo Studio (P)</span>
+            <Send className="w-4 h-4 text-amber-400" />
+            <span>Village Dispatch Errands (Q)</span>
           </button>
 
           <button
             onClick={onOpenWorkshop}
-            className="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium flex items-center justify-center gap-2 border border-slate-700 transition-colors cursor-pointer"
+            className="w-full py-2 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium flex items-center justify-center gap-2 border border-slate-700 transition-colors cursor-pointer"
           >
             <Wrench className="w-4 h-4 text-amber-400" />
-            <span>Solstice Workshop & Upgrades (G)</span>
+            <span>Solstice Workshop & Paint (G)</span>
           </button>
 
           <button
             onClick={onOpenPhotoMode}
-            className="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium flex items-center justify-center gap-2 border border-slate-700 transition-colors cursor-pointer"
+            className="w-full py-2 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium flex items-center justify-center gap-2 border border-slate-700 transition-colors cursor-pointer"
           >
             <Camera className="w-4 h-4 text-pink-400" />
             <span>Solstice Postcard Camera (P)</span>

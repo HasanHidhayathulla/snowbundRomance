@@ -22,6 +22,9 @@ import {
   VolumeX,
   Wrench,
   Zap,
+  Send,
+  Clock,
+  MapPin,
 } from 'lucide-react';
 import { COMBO_LEVELS } from '../game/constants';
 import type { GameHUDStats } from '../game/engine';
@@ -33,6 +36,7 @@ interface GameHUDProps {
   onOpenScrapbook: () => void;
   onOpenPhotoMode: () => void;
   onOpenSettings: () => void;
+  onOpenQuests: () => void;
   onPhotoMode: () => void;
   onPause: () => void;
   isMuted: boolean;
@@ -47,6 +51,7 @@ export const GameHUD: React.FC<GameHUDProps> = ({
   onOpenScrapbook,
   onOpenPhotoMode,
   onOpenSettings,
+  onOpenQuests,
   onPhotoMode,
   onPause,
   isMuted,
@@ -100,7 +105,40 @@ export const GameHUD: React.FC<GameHUDProps> = ({
                 {stats.giftsFound}/{stats.totalGifts}
               </span>
             </div>
+
+            {/* Quests Quick Shortcut */}
+            <button
+              onClick={onOpenQuests}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-900/90 hover:bg-slate-800 border border-amber-600/50 text-xs text-amber-300 font-medium shadow-sm transition-colors cursor-pointer"
+              title="Village Dispatch Board (Q)"
+            >
+              <Send className="w-3.5 h-3.5 text-amber-400" />
+              <span>Errands</span>
+              <span className="font-mono text-[10px] text-amber-400">[Q]</span>
+            </button>
           </div>
+
+          {/* Active Quest Tracker Card */}
+          {stats.activeQuest && (
+            <div className="px-3 py-2 rounded-xl bg-slate-900/95 border border-amber-500/70 text-slate-100 shadow-lg flex items-center justify-between gap-3 max-w-xs animate-fade-in">
+              <div className="flex items-center gap-2">
+                <MapPin className="w-4 h-4 text-amber-400 shrink-0" />
+                <div className="flex flex-col">
+                  <span className="text-[10px] uppercase font-bold text-amber-300 tracking-wider">
+                    {stats.activeQuest.title}
+                  </span>
+                  <span className="text-[11px] text-slate-300 font-medium">
+                    {stats.questTargetDistance}m away
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1 px-2 py-1 rounded bg-slate-950 border border-amber-800/60 font-mono text-xs font-bold text-amber-300">
+                <Clock className="w-3 h-3 text-amber-400" />
+                <span>{stats.questTimeRemainingSec}s</span>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Top-Center: Romantic Combo Multiplier Badge */}
@@ -253,6 +291,15 @@ export const GameHUD: React.FC<GameHUDProps> = ({
               revealed: !!g.revealed,
             }))}
             snowClearedPercent={stats.snowClearedPercent}
+            questWaypoint={
+              stats.activeQuest
+                ? {
+                    x: stats.activeQuest.targetX,
+                    z: stats.activeQuest.targetZ,
+                    title: stats.activeQuest.title,
+                  }
+                : null
+            }
           />
         </div>
       )}

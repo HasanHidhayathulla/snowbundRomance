@@ -2,7 +2,168 @@
  * Game constants, upgrade definitions, collectibles, and balance parameters
  */
 
-export type GameState = 'TITLE' | 'PLAYING' | 'PAUSED' | 'GARAGE' | 'VICTORY' | 'SCRAPBOOK' | 'SETTINGS' | 'PHOTO' | 'PHOTO_MODE';
+export type GameState = 'TITLE' | 'PLAYING' | 'PAUSED' | 'GARAGE' | 'VICTORY' | 'SCRAPBOOK' | 'SETTINGS' | 'PHOTO' | 'PHOTO_MODE' | 'DISPATCH';
+
+export interface TractorSkin {
+  id: string;
+  name: string;
+  desc: string;
+  paintColor: number; // Hex
+  cabinRoofColor: number;
+  trimColor: number;
+  unlockCost: number; // In love letters
+  tag: string;
+}
+
+export const TRACTOR_SKINS: TractorSkin[] = [
+  {
+    id: 'classic-crimson',
+    name: 'Classic Solstice Crimson',
+    desc: 'The iconic Valentine Valley red finish with gold brass trim.',
+    paintColor: 0xbe123c,
+    cabinRoofColor: 0x991b1b,
+    trimColor: 0xf59e0b,
+    unlockCost: 0,
+    tag: 'Default',
+  },
+  {
+    id: 'emerald-evergreen',
+    name: 'Nordic Emerald Frost',
+    desc: 'Deep alpine pine green with frosty pearl silver detailing.',
+    paintColor: 0x065f46,
+    cabinRoofColor: 0x064e3b,
+    trimColor: 0xe2e8f0,
+    unlockCost: 45,
+    tag: 'Alpine',
+  },
+  {
+    id: 'midnight-aurora',
+    name: 'Midnight Aurora Violet',
+    desc: 'Luminous starlight amethyst with glowing celestial accents.',
+    paintColor: 0x581c87,
+    cabinRoofColor: 0x3b0764,
+    trimColor: 0x38bdf8,
+    unlockCost: 80,
+    tag: 'Starlight',
+  },
+  {
+    id: 'golden-hearth',
+    name: 'Golden Solstice Hearth',
+    desc: 'Radiant honey amber and polished warm bronze for festive plowing.',
+    paintColor: 0xd97706,
+    cabinRoofColor: 0x92400e,
+    trimColor: 0xfef08a,
+    unlockCost: 120,
+    tag: 'Festive',
+  },
+  {
+    id: 'rose-quartz',
+    name: 'Sweetheart Rose Quartz',
+    desc: 'Blushing blossom pink with sweet sugar trim.',
+    paintColor: 0xf43f5e,
+    cabinRoofColor: 0xbe123c,
+    trimColor: 0xfdf2f8,
+    unlockCost: 65,
+    tag: 'Romantic',
+  },
+];
+
+export interface VillageDispatch {
+  id: string;
+  title: string;
+  caller: string;
+  description: string;
+  x: number;
+  z: number;
+  radius: number;
+  requiredClearRatio: number;
+  rewardLetters: number;
+  timeLimitSec?: number;
+  icon: string;
+}
+
+export const VILLAGE_DISPATCHES: VillageDispatch[] = [
+  {
+    id: 'dispatch-doctor',
+    title: 'Clinic Medicine Lane Emergency',
+    caller: 'Nurse Clara · Valentine Valley Clinic',
+    description: 'Drifting powder has sealed the clinic delivery route! Clear the North Alley so essential winter warmth supplies can reach our patients.',
+    x: -12,
+    z: -4,
+    radius: 6.0,
+    requiredClearRatio: 0.70,
+    rewardLetters: 45,
+    icon: 'HeartPulse',
+  },
+  {
+    id: 'dispatch-baker',
+    title: 'Warm Cinnamon Flour Supply',
+    caller: 'Master Baker Julien · Cinnamon Bakery',
+    description: 'The morning solstice flour sleigh is stuck on the East Ridge incline! Shovel the slope so the village can have fresh ginger buns.',
+    x: 18,
+    z: 16,
+    radius: 6.5,
+    requiredClearRatio: 0.65,
+    rewardLetters: 50,
+    icon: 'Croissant',
+  },
+  {
+    id: 'dispatch-gazebo-lights',
+    title: 'Festival Fairy Lights Wire Repair',
+    caller: 'Electrician Mateo · Solstice Festival Committee',
+    description: 'High winds toppled snow over the underground lighting junction near the fountain. Plow the access circle before the evening ceremony!',
+    x: 4,
+    z: 12,
+    radius: 5.5,
+    requiredClearRatio: 0.75,
+    rewardLetters: 55,
+    icon: 'Sparkles',
+  },
+  {
+    id: 'dispatch-lovers-kiss',
+    title: 'Romantic Starlight Overlook',
+    caller: 'Postman Leo · Valentine Valley Mail',
+    description: 'A couple is stranded at the Western Overlook trying to watch the twilight aurora! Plow their romantic retreat path.',
+    x: -28,
+    z: -10,
+    radius: 6.0,
+    requiredClearRatio: 0.70,
+    rewardLetters: 60,
+    icon: 'Compass',
+  },
+];
+
+export interface RadioStation {
+  id: string;
+  freq: string;
+  name: string;
+  genre: string;
+  description: string;
+}
+
+export const RADIO_STATIONS: RadioStation[] = [
+  {
+    id: 'val-classic',
+    freq: '94.3 FM',
+    name: 'Valentine Valley Harmonies',
+    genre: 'Retro Solstice Wurlitzer & Strings',
+    description: 'Warm analog chords and soft nostalgic winter ballads broadcast across the snowcapped pines.',
+  },
+  {
+    id: 'cozy-lofi',
+    freq: '101.8 FM',
+    name: 'Fireside Hearth Lofi',
+    genre: 'Gentle Beats & Amber Chords',
+    description: 'Subtle rhythmic warmth to accompany the meditative hum of the snowplow engine.',
+  },
+  {
+    id: 'aurora-ambient',
+    freq: '107.5 FM',
+    name: 'Northern Aurora Skywaves',
+    genre: 'Ethereal Winter Dreamscape',
+    description: 'Deep resonant crystal pads inspired by the dancing emerald lights above the valley.',
+  },
+];
 
 export interface UpgradeTier {
   level: number;

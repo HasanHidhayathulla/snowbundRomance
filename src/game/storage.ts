@@ -34,6 +34,10 @@ export interface PersistentProgress {
   totalCellsPlowed: number;
   postcardsCaptured: number;
   totalSnowPlowedHectares: number;
+  activeSkinId: string;
+  unlockedSkinIds: string[];
+  completedDispatchIds: string[];
+  radioStationId: string;
   savedPostcards?: SavedPostcard[];
 }
 
@@ -67,6 +71,10 @@ export const DEFAULT_PROGRESS: PersistentProgress = {
   totalCellsPlowed: 0,
   postcardsCaptured: 0,
   totalSnowPlowedHectares: 0,
+  activeSkinId: 'classic-crimson',
+  unlockedSkinIds: ['classic-crimson'],
+  completedDispatchIds: [],
+  radioStationId: 'val-classic',
 };
 
 export function loadGameSettings(): GameSettings {

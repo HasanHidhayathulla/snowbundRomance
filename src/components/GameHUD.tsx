@@ -6,6 +6,7 @@
 
 import React, { useState } from 'react';
 import {
+  AlertCircle,
   BookOpen,
   Camera,
   ChevronDown,
@@ -16,6 +17,7 @@ import {
   Landmark,
   Mail,
   Pause,
+  Radio,
   Settings,
   Snowflake,
   Volume2,
@@ -23,7 +25,7 @@ import {
   Wrench,
   Zap,
 } from 'lucide-react';
-import { COMBO_LEVELS } from '../game/constants';
+import { COMBO_LEVELS, RADIO_STATIONS, VILLAGE_DISPATCHES } from '../game/constants';
 import type { GameHUDStats } from '../game/engine';
 import { VillageRadar } from './VillageRadar';
 
@@ -32,6 +34,8 @@ interface GameHUDProps {
   onOpenWorkshop: () => void;
   onOpenScrapbook: () => void;
   onOpenPhotoMode: () => void;
+  onOpenDispatchModal: () => void;
+  onCycleRadio: () => void;
   onOpenSettings: () => void;
   onPhotoMode: () => void;
   onPause: () => void;
@@ -46,6 +50,8 @@ export const GameHUD: React.FC<GameHUDProps> = ({
   onOpenWorkshop,
   onOpenScrapbook,
   onOpenPhotoMode,
+  onOpenDispatchModal,
+  onCycleRadio,
   onOpenSettings,
   onPhotoMode,
   onPause,
@@ -58,6 +64,10 @@ export const GameHUD: React.FC<GameHUDProps> = ({
 
   // Active combo styling
   const comboInfo = COMBO_LEVELS[stats.comboLevel - 1] || COMBO_LEVELS[0];
+
+  // Active radio station & dispatch
+  const currentStation = RADIO_STATIONS.find((s) => s.id === stats.radioStationId) || RADIO_STATIONS[0];
+  const activeDispatch = VILLAGE_DISPATCHES.find((d) => d.id === stats.activeDispatchId);
 
   return (
     <div className="absolute inset-0 pointer-events-none select-none flex flex-col justify-between p-4 overflow-hidden">
@@ -100,7 +110,41 @@ export const GameHUD: React.FC<GameHUDProps> = ({
                 {stats.giftsFound}/{stats.totalGifts}
               </span>
             </div>
+
+            {/* Quick Radio Frequency Bar */}
+            <button
+              onClick={onCycleRadio}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-900/90 hover:bg-slate-800 border border-slate-800 text-xs text-cyan-300 font-medium transition-colors cursor-pointer"
+              title="Click to cycle Radio Station"
+            >
+              <Radio className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
+              <span className="font-mono text-[11px]">{currentStation.freq}</span>
+            </button>
           </div>
+
+          {/* Active Emergency Dispatch Ticker */}
+          {activeDispatch && !stats.completedDispatchIds.includes(activeDispatch.id) && (
+            <div
+              onClick={onOpenDispatchModal}
+              className="px-3 py-1.5 rounded-xl bg-slate-900/95 border border-cyan-500/60 shadow-lg text-slate-100 flex items-center justify-between gap-3 max-w-sm cursor-pointer hover:border-cyan-400 transition-colors"
+            >
+              <div className="flex items-center gap-2 overflow-hidden">
+                <AlertCircle className="w-4 h-4 text-cyan-400 flex-shrink-0 animate-bounce" />
+                <div className="truncate text-xs">
+                  <span className="font-semibold text-cyan-300">{activeDispatch.title}</span>
+                  <div className="w-28 h-1 bg-slate-800 rounded-full mt-1 overflow-hidden">
+                    <div
+                      className="h-full bg-cyan-400 rounded-full transition-all duration-200"
+                      style={{ width: `${Math.round(stats.activeDispatchProgress * 100)}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+              <span className="text-[10px] font-mono font-bold text-cyan-300 bg-cyan-950/70 border border-cyan-800/60 px-1.5 py-0.5 rounded flex-shrink-0">
+                {Math.round(stats.activeDispatchProgress * 100)}%
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Top-Center: Romantic Combo Multiplier Badge */}
@@ -183,6 +227,17 @@ export const GameHUD: React.FC<GameHUDProps> = ({
             <span className="hidden md:inline">Log</span>
           </button>
 
+          {/* Emergency Dispatches & Radio Modal */}
+          <button
+            onClick={onOpenDispatchModal}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-cyan-950/80 hover:bg-cyan-900/80 border border-cyan-700/60 text-xs font-semibold text-cyan-200 shadow-md transition-colors cursor-pointer"
+            title="Emergency Dispatches & Radio (R)"
+          >
+            <Radio className="w-4 h-4 text-cyan-400" />
+            <span className="hidden sm:inline">Dispatches</span>
+            <span className="font-mono text-[10px] text-cyan-300">[R]</span>
+          </button>
+
           {/* Postcard Photo Studio */}
           <button
             onClick={onPhotoMode}
@@ -252,6 +307,16 @@ export const GameHUD: React.FC<GameHUDProps> = ({
               collected: g.collected,
               revealed: !!g.revealed,
             }))}
+            activeDispatch={
+              activeDispatch && !stats.completedDispatchIds.includes(activeDispatch.id)
+                ? {
+                    id: activeDispatch.id,
+                    x: activeDispatch.x,
+                    z: activeDispatch.z,
+                    radius: activeDispatch.radius,
+                  }
+                : null
+            }
             snowClearedPercent={stats.snowClearedPercent}
           />
         </div>
@@ -373,6 +438,8 @@ export const GameHUD: React.FC<GameHUDProps> = ({
               <span>P Photo</span>
               <span>·</span>
               <span>G Garage</span>
+              <span>·</span>
+              <span>R Radio</span>
               <span>·</span>
               <span>L Album</span>
             </div>

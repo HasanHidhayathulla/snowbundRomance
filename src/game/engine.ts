@@ -11,12 +11,17 @@ import {
   ACHIEVEMENTS,
   COMBO_LEVELS,
   LANDMARKS,
+  RADIO_STATIONS,
   ROMANTIC_GIFTS,
+  TRACTOR_SKINS,
   UPGRADES,
+  VILLAGE_DISPATCHES,
   WORLD_SIZE,
   type GameState,
   type Landmark,
   type RomanticGift,
+  type TractorSkin,
+  type VillageDispatch,
 } from './constants';
 import {
   loadGameProgress,
@@ -34,6 +39,7 @@ import {
   createSnowman,
   createSnowPine,
   createStreetlamp,
+  materials,
 } from './models';
 import { ParticleSystem } from './particleSystem';
 import { SnowGridSystem } from './snowGrid';
@@ -61,6 +67,12 @@ export interface GameHUDStats {
   gifts: RomanticGift[];
   unlockedAchievementIds: string[];
   atmosphere: SolsticeAtmosphere;
+  activeSkinId: string;
+  unlockedSkinIds: string[];
+  activeDispatchId: string | null;
+  activeDispatchProgress: number; // 0 to 1
+  completedDispatchIds: string[];
+  radioStationId: string;
 }
 
 import {
@@ -89,6 +101,18 @@ export class SnowPlowGameEngine {
   private exhaustStack!: THREE.Mesh;
   private headlampL!: THREE.SpotLight;
   private headlampR!: THREE.SpotLight;
+  private tractorPaintMaterials: THREE.MeshStandardMaterial[] = [];
+  private tractorRoofMaterials: THREE.MeshStandardMaterial[] = [];
+  private tractorTrimMaterials: THREE.MeshStandardMaterial[] = [];
+  private activeSkinId: string = 'classic-crimson';
+  private unlockedSkinIds: string[] = ['classic-crimson'];
+
+  // Dispatch & Radio State
+  private activeDispatch: VillageDispatch | null = null;
+  private completedDispatchIds: string[] = [];
+  private dispatchClearProgress: number = 0;
+  private radioStationId: string = 'val-classic';
+  private dispatchMarkerMesh: THREE.Group | null = null;
 
   // Lighting References for Atmosphere
   private hemiLight!: THREE.HemisphereLight;
@@ -158,6 +182,10 @@ export class SnowPlowGameEngine {
     this.loveLetters = saved.loveLetters || 20;
     this.upgrades = { ...this.upgrades, ...saved.upgrades };
     this.unlockedAchievementIds = [...(saved.unlockedAchievementIds || [])];
+    this.activeSkinId = saved.activeSkinId || 'classic-crimson';
+    this.unlockedSkinIds = saved.unlockedSkinIds && saved.unlockedSkinIds.length ? saved.unlockedSkinIds : ['classic-crimson'];
+    this.completedDispatchIds = [...(saved.completedDispatchIds || [])];
+    this.radioStationId = saved.radioStationId || 'val-classic';
 
     // Load saved settings
     const settings = loadGameSettings();
@@ -167,6 +195,8 @@ export class SnowPlowGameEngine {
     this.initScene();
     this.applyAtmosphere(this.atmosphere);
     this.initWorldEntities();
+    this.initDispatchMarker();
+    this.applyTractorSkin(this.activeSkinId);
     this.setupEventListeners();
     this.startLoop();
   }
@@ -269,6 +299,11 @@ export class SnowPlowGameEngine {
     this.exhaustStack = tractorData.exhaustStack;
     this.headlampL = tractorData.headlightL;
     this.headlampR = tractorData.headlightR;
+
+    // Cache paintable materials from tractor
+    this.tractorPaintMaterials = [materials.tractorPaint];
+    this.tractorRoofMaterials = [materials.tractorCabinRoof];
+    this.tractorTrimMaterials = [materials.tractorGoldTrim];
 
     this.tractorGroup.position.set(0, 0, 0);
     this.scene.add(this.tractorGroup);
@@ -395,6 +430,125 @@ export class SnowPlowGameEngine {
     });
   }
 
+  private initDispatchMarker() {
+    // 3D holographic pulsing beacon for active emergency dispatch
+    const markerGroup = new THREE.Group();
+    markerGroup.name = 'DispatchMarker';
+    markerGroup.visible = false;
+
+    // Outer glow ring
+    const ringGeo = new THREE.RingGeometry(2.5, 2.8, 32);
+    ringGeo.rotateX(-Math.PI / 2);
+    const ringMat = new THREE.MeshBasicMaterial({
+      color: 0x38bdf8,
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.6,
+    });
+    const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+    markerGroup.add(ringMesh);
+
+    // Vertical beacon cylinder
+    const cylGeo = new THREE.CylinderGeometry(0.08, 0.08, 4.0, 16);
+    const cylMat = new THREE.MeshBasicMaterial({
+      color: 0x38bdf8,
+      transparent: true,
+      opacity: 0.7,
+    });
+    const cylMesh = new THREE.Mesh(cylGeo, cylMat);
+    cylMesh.position.y = 2.0;
+    markerGroup.add(cylMesh);
+
+    // Floating diamond on top
+    const diamondGeo = new THREE.OctahedronGeometry(0.45, 0);
+    const diamondMat = new THREE.MeshStandardMaterial({
+      color: 0x38bdf8,
+      emissive: 0x0284c7,
+      emissiveIntensity: 0.8,
+    });
+    const diamondMesh = new THREE.Mesh(diamondGeo, diamondMat);
+    diamondMesh.position.y = 4.2;
+    markerGroup.add(diamondMesh);
+
+    this.scene.add(markerGroup);
+    this.dispatchMarkerMesh = markerGroup;
+
+    // Pick first unfinished dispatch or default
+    const firstUnfinished = VILLAGE_DISPATCHES.find((d) => !this.completedDispatchIds.includes(d.id));
+    if (firstUnfinished) {
+      this.setActiveDispatch(firstUnfinished.id);
+    }
+  }
+
+  public setActiveDispatch(dispatchId: string | null) {
+    if (!dispatchId) {
+      this.activeDispatch = null;
+      if (this.dispatchMarkerMesh) this.dispatchMarkerMesh.visible = false;
+      this.pushHUDUpdate();
+      return;
+    }
+    const found = VILLAGE_DISPATCHES.find((d) => d.id === dispatchId);
+    if (!found) return;
+
+    this.activeDispatch = found;
+    if (this.dispatchMarkerMesh) {
+      this.dispatchMarkerMesh.position.set(found.x, 0.1, found.z);
+      this.dispatchMarkerMesh.visible = true;
+    }
+    synthAudio.playDispatchAlert();
+    this.triggerMessage(`📻 New Village Dispatch: ${found.title}! Clear the marked snow area!`);
+    this.pushHUDUpdate();
+  }
+
+  public applyTractorSkin(skinId: string) {
+    const skin = TRACTOR_SKINS.find((s) => s.id === skinId) || TRACTOR_SKINS[0];
+    this.activeSkinId = skin.id;
+
+    materials.tractorPaint.color.setHex(skin.paintColor);
+    materials.tractorCabinRoof.color.setHex(skin.cabinRoofColor);
+    materials.tractorGoldTrim.color.setHex(skin.trimColor);
+
+    saveGameProgress({ activeSkinId: skin.id });
+    this.pushHUDUpdate();
+  }
+
+  public unlockAndApplySkin(skinId: string): boolean {
+    const skin = TRACTOR_SKINS.find((s) => s.id === skinId);
+    if (!skin) return false;
+
+    if (!this.unlockedSkinIds.includes(skin.id)) {
+      if (this.loveLetters < skin.unlockCost) return false;
+      this.loveLetters -= skin.unlockCost;
+      this.unlockedSkinIds.push(skin.id);
+      saveGameProgress({
+        loveLetters: this.loveLetters,
+        unlockedSkinIds: [...this.unlockedSkinIds],
+      });
+      synthAudio.playUpgradeSound();
+      this.triggerMessage(`Unlocked Livery: ${skin.name}!`);
+    }
+
+    this.applyTractorSkin(skin.id);
+    return true;
+  }
+
+  public cycleRadioStation() {
+    const currentIndex = RADIO_STATIONS.findIndex((r) => r.id === this.radioStationId);
+    const nextIndex = (currentIndex + 1) % RADIO_STATIONS.length;
+    const nextStation = RADIO_STATIONS[nextIndex];
+    this.setRadioStation(nextStation.id);
+  }
+
+  public setRadioStation(stationId: string) {
+    const station = RADIO_STATIONS.find((r) => r.id === stationId);
+    if (!station) return;
+    this.radioStationId = station.id;
+    synthAudio.setRadioStation(station.id);
+    saveGameProgress({ radioStationId: station.id });
+    this.triggerMessage(`📻 Radio Tuned: ${station.name} (${station.freq})`);
+    this.pushHUDUpdate();
+  }
+
   private setupEventListeners() {
     window.addEventListener('keydown', (e) => {
       this.keysHeld[e.code] = true;
@@ -439,6 +593,13 @@ export class SnowPlowGameEngine {
         if (this.gameState === 'PLAYING') {
           this.setGameState('PHOTO');
         } else if (this.gameState === 'PHOTO' || this.gameState === 'PHOTO_MODE') {
+          this.setGameState('PLAYING');
+        }
+      }
+      if (e.code === 'KeyR') {
+        if (this.gameState === 'PLAYING') {
+          this.setGameState('DISPATCH');
+        } else if (this.gameState === 'DISPATCH') {
           this.setGameState('PLAYING');
         }
       }
@@ -978,6 +1139,49 @@ export class SnowPlowGameEngine {
       }
     });
 
+    // 6. Active Emergency Dispatch Monitoring
+    if (this.activeDispatch && !this.completedDispatchIds.includes(this.activeDispatch.id)) {
+      const dispatchRatio = this.snowGrid.getRegionClearedRatio(
+        this.activeDispatch.x,
+        this.activeDispatch.z,
+        this.activeDispatch.radius
+      );
+      this.dispatchClearProgress = Math.min(1.0, dispatchRatio / this.activeDispatch.requiredClearRatio);
+
+      // Pulse holographic dispatch marker
+      if (this.dispatchMarkerMesh) {
+        const pulse = 1.0 + Math.sin(performance.now() * 0.005) * 0.15;
+        this.dispatchMarkerMesh.scale.set(pulse, 1, pulse);
+      }
+
+      if (dispatchRatio >= this.activeDispatch.requiredClearRatio) {
+        const finishedId = this.activeDispatch.id;
+        this.completedDispatchIds.push(finishedId);
+        this.loveLetters += this.activeDispatch.rewardLetters;
+
+        synthAudio.playDispatchSuccess();
+        this.hitstopDuration = 0.1;
+        this.cameraShakeIntensity = 0.3;
+        this.particles.emitRomanticHearts(this.activeDispatch.x, 2.0, this.activeDispatch.z, 25);
+
+        saveGameProgress({
+          completedDispatchIds: [...this.completedDispatchIds],
+          loveLetters: this.loveLetters,
+        });
+
+        this.triggerMessage(`✅ Dispatch Complete: ${this.activeDispatch.title}! (+${this.activeDispatch.rewardLetters} Letters)`);
+
+        // Switch to next available dispatch if any
+        const nextDispatch = VILLAGE_DISPATCHES.find((d) => !this.completedDispatchIds.includes(d.id));
+        if (nextDispatch) {
+          this.setActiveDispatch(nextDispatch.id);
+        } else {
+          this.activeDispatch = null;
+          if (this.dispatchMarkerMesh) this.dispatchMarkerMesh.visible = false;
+        }
+      }
+    }
+
     // Check Victory Condition: All 4 landmarks cleared
     if (allCleared && this.landmarks.length > 0) {
       this.gameState = 'VICTORY';
@@ -1062,6 +1266,12 @@ export class SnowPlowGameEngine {
       gifts: this.gifts.map((g) => ({ ...g })),
       unlockedAchievementIds: [...this.unlockedAchievementIds],
       atmosphere: this.atmosphere,
+      activeSkinId: this.activeSkinId,
+      unlockedSkinIds: [...this.unlockedSkinIds],
+      activeDispatchId: this.activeDispatch ? this.activeDispatch.id : null,
+      activeDispatchProgress: this.dispatchClearProgress,
+      completedDispatchIds: [...this.completedDispatchIds],
+      radioStationId: this.radioStationId,
     });
   }
 
@@ -1092,6 +1302,12 @@ export class SnowPlowGameEngine {
       gifts: this.gifts.map((g) => ({ ...g })),
       unlockedAchievementIds: [...this.unlockedAchievementIds],
       atmosphere: this.atmosphere,
+      activeSkinId: this.activeSkinId,
+      unlockedSkinIds: [...this.unlockedSkinIds],
+      activeDispatchId: this.activeDispatch ? this.activeDispatch.id : null,
+      activeDispatchProgress: this.dispatchClearProgress,
+      completedDispatchIds: [...this.completedDispatchIds],
+      radioStationId: this.radioStationId,
     };
   }
 

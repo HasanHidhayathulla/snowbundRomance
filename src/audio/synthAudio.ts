@@ -299,6 +299,60 @@ class SynthAudioEngine {
   }
 
   /**
+   * Quest accepted jingle (adventurous brassy chime)
+   */
+  public playQuestStart() {
+    if (!this.ctx || !this.sfxGain || !this.isSfxEnabled) return;
+    const t = this.ctx.currentTime;
+    const notes = [329.63, 392.0, 493.88, 659.25]; // E4, G4, B4, E5
+
+    notes.forEach((freq, idx) => {
+      const noteTime = t + idx * 0.07;
+      const osc = this.ctx!.createOscillator();
+      const gain = this.ctx!.createGain();
+
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, noteTime);
+
+      gain.gain.setValueAtTime(0.14, noteTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, noteTime + 0.3);
+
+      osc.connect(gain);
+      gain.connect(this.sfxGain!);
+
+      osc.start(noteTime);
+      osc.stop(noteTime + 0.32);
+    });
+  }
+
+  /**
+   * Quest completed successfully fanfare
+   */
+  public playQuestComplete() {
+    if (!this.ctx || !this.sfxGain || !this.isSfxEnabled) return;
+    const t = this.ctx.currentTime;
+    const notes = [523.25, 659.25, 783.99, 1046.5, 1318.51]; // C5, E5, G5, C6, E6
+
+    notes.forEach((freq, idx) => {
+      const noteTime = t + idx * 0.08;
+      const osc = this.ctx!.createOscillator();
+      const gain = this.ctx!.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, noteTime);
+
+      gain.gain.setValueAtTime(0.16, noteTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, noteTime + 0.45);
+
+      osc.connect(gain);
+      gain.connect(this.sfxGain!);
+
+      osc.start(noteTime);
+      osc.stop(noteTime + 0.48);
+    });
+  }
+
+  /**
    * Bump against obstacle
    */
   public playBumpSound() {

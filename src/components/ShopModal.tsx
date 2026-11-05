@@ -3,15 +3,18 @@
  * Allows player to spend gathered Love Letters on snowplow upgrades
  */
 
-import React from 'react';
-import { Flame, Heart, Mail, Music, Snowflake, X, Zap } from 'lucide-react';
-import { UPGRADES } from '../game/constants';
+import React, { useState } from 'react';
+import { Check, Flame, Heart, Mail, Music, Palette, Snowflake, Wrench, X, Zap } from 'lucide-react';
+import { PAINT_LIVERIES, UPGRADES, type PaintLivery } from '../game/constants';
 
 interface ShopModalProps {
   loveLetters: number;
   upgrades: Record<string, number>;
   onBuyUpgrade: (upgradeId: string) => void;
   onClose: () => void;
+  selectedLiveryId?: string;
+  unlockedLiveryIds?: string[];
+  onSelectLivery?: (liveryId: string) => void;
 }
 
 export const ShopModal: React.FC<ShopModalProps> = ({
@@ -19,7 +22,12 @@ export const ShopModal: React.FC<ShopModalProps> = ({
   upgrades,
   onBuyUpgrade,
   onClose,
+  selectedLiveryId = 'crimson_valentine',
+  unlockedLiveryIds = ['crimson_valentine'],
+  onSelectLivery,
 }) => {
+  const [activeTab, setActiveTab] = useState<'upgrades' | 'paint'>('upgrades');
+
   const getIcon = (iconName: string) => {
     switch (iconName) {
       case 'Snowflake':
@@ -71,7 +79,35 @@ export const ShopModal: React.FC<ShopModalProps> = ({
           </div>
         </div>
 
-        {/* Upgrades List */}
+        {/* Workshop Navigation Tabs */}
+        <div className="flex items-center gap-2 pt-3">
+          <button
+            onClick={() => setActiveTab('upgrades')}
+            className={`px-4 py-1.5 text-xs font-semibold rounded-xl flex items-center gap-2 transition-all cursor-pointer ${
+              activeTab === 'upgrades'
+                ? 'bg-rose-600 text-white shadow-md'
+                : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Wrench className="w-3.5 h-3.5" />
+            <span>Equipment Upgrades</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('paint')}
+            className={`px-4 py-1.5 text-xs font-semibold rounded-xl flex items-center gap-2 transition-all cursor-pointer ${
+              activeTab === 'paint'
+                ? 'bg-rose-600 text-white shadow-md'
+                : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Palette className="w-3.5 h-3.5" />
+            <span>Solstice Paint Works ({unlockedLiveryIds.length}/{PAINT_LIVERIES.length})</span>
+          </button>
+        </div>
+
+        {/* Tab 1: Equipment Upgrades */}
+        {activeTab === 'upgrades' && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4 overflow-y-auto">
           {Object.values(UPGRADES).map((item) => {
             const currentLevel = upgrades[item.id] || 1;
@@ -148,6 +184,104 @@ export const ShopModal: React.FC<ShopModalProps> = ({
             );
           })}
         </div>
+        )}
+
+        {/* Tab 2: Tractor Paint Finishes */}
+        {activeTab === 'paint' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4 overflow-y-auto">
+            {PAINT_LIVERIES.map((livery) => {
+              const isUnlocked = unlockedLiveryIds.includes(livery.id);
+              const isEquipped = selectedLiveryId === livery.id;
+              const canAfford = loveLetters >= livery.cost;
+
+              // Convert integer hex colors to CSS strings
+              const hexBody = `#${livery.bodyColor.toString(16).padStart(6, '0')}`;
+              const hexTrim = `#${livery.trimColor.toString(16).padStart(6, '0')}`;
+              const hexRoof = `#${livery.roofColor.toString(16).padStart(6, '0')}`;
+
+              return (
+                <div
+                  key={livery.id}
+                  className={`flex flex-col justify-between p-4 rounded-xl border transition-all ${
+                    isEquipped
+                      ? 'bg-slate-800/95 border-rose-500 shadow-md ring-1 ring-rose-500/50'
+                      : isUnlocked
+                      ? 'bg-slate-800/70 border-slate-700 hover:border-slate-600'
+                      : 'bg-slate-900/60 border-slate-800'
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-3">
+                        {/* Color swatch trio */}
+                        <div className="flex items-center -space-x-1.5">
+                          <span
+                            className="w-5 h-5 rounded-full border-2 border-slate-900 shadow-sm"
+                            style={{ backgroundColor: hexBody }}
+                          />
+                          <span
+                            className="w-5 h-5 rounded-full border-2 border-slate-900 shadow-sm"
+                            style={{ backgroundColor: hexRoof }}
+                          />
+                          <span
+                            className="w-5 h-5 rounded-full border-2 border-slate-900 shadow-sm"
+                            style={{ backgroundColor: hexTrim }}
+                          />
+                        </div>
+
+                        <div>
+                          <h4 className="font-semibold text-sm text-white">{livery.name}</h4>
+                          <span className="text-[11px] text-slate-400">{livery.colorName}</span>
+                        </div>
+                      </div>
+
+                      {isEquipped && (
+                        <span className="flex items-center gap-1 text-[11px] font-bold text-rose-300 px-2 py-0.5 rounded bg-rose-950/80 border border-rose-800/60">
+                          <Check className="w-3.5 h-3.5" />
+                          EQUIPPED
+                        </span>
+                      )}
+                    </div>
+
+                    <p className="text-xs text-slate-300 mb-3 leading-relaxed">
+                      {livery.desc}
+                    </p>
+                  </div>
+
+                  <div className="pt-2 border-t border-slate-700/60 flex items-center justify-between">
+                    <span className="text-xs text-slate-400">
+                      {livery.cost === 0 ? 'Classic Default' : `${livery.cost} Love Letters`}
+                    </span>
+
+                    {isEquipped ? (
+                      <span className="text-xs font-semibold text-slate-400">Active</span>
+                    ) : isUnlocked ? (
+                      <button
+                        onClick={() => onSelectLivery && onSelectLivery(livery.id)}
+                        className="px-3 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-xs font-semibold transition-colors cursor-pointer"
+                      >
+                        Equip Livery
+                      </button>
+                    ) : (
+                      <button
+                        disabled={!canAfford}
+                        onClick={() => onSelectLivery && onSelectLivery(livery.id)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                          canAfford
+                            ? 'bg-rose-600 hover:bg-rose-500 text-white shadow-md'
+                            : 'bg-slate-700 text-slate-400 cursor-not-allowed opacity-60'
+                        }`}
+                      >
+                        <Palette className="w-3.5 h-3.5" />
+                        <span>Unlock ({livery.cost} Letters)</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         {/* Footer */}
         <div className="pt-3 border-t border-slate-800 flex justify-end">

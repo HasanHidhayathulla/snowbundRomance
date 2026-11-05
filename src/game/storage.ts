@@ -38,6 +38,10 @@ export interface PersistentProgress {
   unlockedSkinIds: string[];
   completedDispatchIds: string[];
   radioStationId: string;
+  activeQuestId?: string | null;
+  completedQuestIds?: string[];
+  selectedLiveryId?: string;
+  unlockedLiveryIds?: string[];
   savedPostcards?: SavedPostcard[];
 }
 
@@ -75,6 +79,10 @@ export const DEFAULT_PROGRESS: PersistentProgress = {
   unlockedSkinIds: ['classic-crimson'],
   completedDispatchIds: [],
   radioStationId: 'val-classic',
+  activeQuestId: null,
+  completedQuestIds: [],
+  selectedLiveryId: 'crimson_valentine',
+  unlockedLiveryIds: ['crimson_valentine'],
 };
 
 export function loadGameSettings(): GameSettings {

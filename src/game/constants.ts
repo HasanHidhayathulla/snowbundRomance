@@ -162,6 +162,138 @@ export const RADIO_STATIONS: RadioStation[] = [
     name: 'Northern Aurora Skywaves',
     genre: 'Ethereal Winter Dreamscape',
     description: 'Deep resonant crystal pads inspired by the dancing emerald lights above the valley.',
+export type GameState = 'TITLE' | 'PLAYING' | 'PAUSED' | 'GARAGE' | 'VICTORY' | 'SCRAPBOOK' | 'SETTINGS' | 'PHOTO' | 'PHOTO_MODE' | 'QUESTS';
+
+export interface SolsticeQuest {
+  id: string;
+  title: string;
+  requester: string;
+  category: 'delivery' | 'clearing' | 'rescue';
+  description: string;
+  targetX: number;
+  targetZ: number;
+  targetRadius: number;
+  timeLimitSec: number;
+  rewardLetters: number;
+  dialogueSuccess: string;
+}
+
+export const SOLSTICE_QUESTS: SolsticeQuest[] = [
+  {
+    id: 'quest_cinnamon_delivery',
+    title: 'Warm Cinnamon Delivery',
+    requester: 'Julien the Baker',
+    category: 'delivery',
+    description: 'Rush freshly baked hot cinnamon rolls from the Bakery to the Lovers’ Bridge before they turn cold!',
+    targetX: 0,
+    targetZ: -18,
+    targetRadius: 7.0,
+    timeLimitSec: 75,
+    rewardLetters: 45,
+    dialogueSuccess: '“They arrived still steaming! You made our bridge solstice date magical!”',
+  },
+  {
+    id: 'quest_square_clearing',
+    title: 'Grand Tree Festival Rush',
+    requester: 'Mayor Holly',
+    category: 'clearing',
+    description: 'Plow the perimeter road leading to the Grand Solstice Tree so the festive choir can set up their songbooks!',
+    targetX: 12,
+    targetZ: 0,
+    targetRadius: 8.5,
+    timeLimitSec: 90,
+    rewardLetters: 60,
+    dialogueSuccess: '“The choir bells are ringing loud and clear thanks to your swift blade!”',
+  },
+  {
+    id: 'quest_clocktower_chime',
+    title: 'Midnight Bell Express',
+    requester: 'Master Horologist Luke',
+    category: 'rescue',
+    description: 'Reach the Alpine Clocktower plaza and plow the frozen bell-ringer approach before midnight chimes.',
+    targetX: -20,
+    targetZ: -16,
+    targetRadius: 7.5,
+    timeLimitSec: 80,
+    rewardLetters: 55,
+    dialogueSuccess: '“The bronze pendulum swings free! Hear love chime across the valley!”',
+  },
+  {
+    id: 'quest_cozy_chalet_patrol',
+    title: 'Southern Chalet Lifeline',
+    requester: 'Grandma Colette',
+    category: 'delivery',
+    description: 'Navigate the deep drifts around the outer chalets to deliver firewood and emergency heart lanterns.',
+    targetX: -32,
+    targetZ: 28,
+    targetRadius: 6.5,
+    timeLimitSec: 85,
+    rewardLetters: 50,
+    dialogueSuccess: '“Our hearth is ablaze and the cabin has never been cozier!”',
+  },
+];
+
+export interface PaintLivery {
+  id: string;
+  name: string;
+  colorName: string;
+  bodyColor: number;
+  roofColor: number;
+  trimColor: number;
+  cost: number;
+  desc: string;
+}
+
+export const PAINT_LIVERIES: PaintLivery[] = [
+  {
+    id: 'crimson_valentine',
+    name: 'Valentine Crimson',
+    colorName: 'Crimson & Cream',
+    bodyColor: 0xbe123c,
+    roofColor: 0x991b1b,
+    trimColor: 0xf59e0b,
+    cost: 0,
+    desc: 'The timeless Heartplow livery: deep ruby red with warm golden trim.',
+  },
+  {
+    id: 'aurora_mint',
+    name: 'Solstice Aurora',
+    colorName: 'Emerald & Mint',
+    bodyColor: 0x059669,
+    roofColor: 0x064e3b,
+    trimColor: 0x6ee7b7,
+    cost: 40,
+    desc: 'Luminous northern lights emerald with frosted winter spruce trim.',
+  },
+  {
+    id: 'starlight_sapphire',
+    name: 'Starlight Midnight',
+    colorName: 'Sapphire & Silver',
+    bodyColor: 0x1d4ed8,
+    roofColor: 0x1e1b4b,
+    trimColor: 0x93c5fd,
+    cost: 55,
+    desc: 'Deep alpine night sky indigo with polished celestial silver trim.',
+  },
+  {
+    id: 'golden_solstice',
+    name: 'Grand Hearth Gold',
+    colorName: 'Gilded Amber',
+    bodyColor: 0xd97706,
+    roofColor: 0x78350f,
+    trimColor: 0xfef08a,
+    cost: 85,
+    desc: 'Warm golden hearth glow finish reflecting the festive village lights.',
+  },
+  {
+    id: 'rose_petal',
+    name: 'Sweetheart Blossom',
+    colorName: 'Rose Petal Pink',
+    bodyColor: 0xec4899,
+    roofColor: 0x831843,
+    trimColor: 0xfbcfe8,
+    cost: 70,
+    desc: 'Soft blush pink tribute to winter flowers blooming against the snow.',
   },
 ];
 
@@ -402,6 +534,20 @@ export const ACHIEVEMENTS: SolsticeAchievement[] = [
     description: 'Clear all 4 landmarks and bring all lovers together.',
     icon: 'Sparkles',
     rewardLetters: 100,
+  },
+  {
+    id: 'village_courier',
+    title: 'Solstice Star Courier',
+    description: 'Complete your first Village Dispatch delivery or rescue quest.',
+    icon: 'Send',
+    rewardLetters: 35,
+  },
+  {
+    id: 'festive_finisher',
+    title: 'Custom Coachbuilder',
+    description: 'Apply a custom paint livery to the Heartplow in the Solstice Workshop.',
+    icon: 'Palette',
+    rewardLetters: 30,
   },
 ];
 

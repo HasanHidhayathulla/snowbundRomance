@@ -32,6 +32,7 @@ interface VillageRadarProps {
   landmarks: RadarLandmark[];
   gifts: RadarGift[];
   snowClearedPercent: number;
+  activeQuestTarget?: { x: number; z: number; title: string } | null;
 }
 
 export const VillageRadar: React.FC<VillageRadarProps> = ({
@@ -41,6 +42,7 @@ export const VillageRadar: React.FC<VillageRadarProps> = ({
   landmarks,
   gifts,
   snowClearedPercent,
+  activeQuestTarget,
 }) => {
   const [isMinimized, setIsMinimized] = useState(false);
 
@@ -113,6 +115,19 @@ export const VillageRadar: React.FC<VillageRadarProps> = ({
 
         {/* SVG Marker Layer with explicit viewBox */}
         <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full">
+          {/* Active Quest Target Waypoint */}
+          {activeQuestTarget && (() => {
+            const qx = mapToPercent(activeQuestTarget.x);
+            const qz = mapToPercent(activeQuestTarget.z);
+            return (
+              <g key="quest-target" transform={`translate(${qx}, ${qz})`}>
+                <circle r="6" fill="#38bdf8" opacity="0.3" className="animate-ping" />
+                <circle r="3.8" fill="#0284c7" stroke="#ffffff" strokeWidth="1" />
+                <text x="0" y="2.5" textAnchor="middle" fill="#ffffff" fontSize="6" fontWeight="bold">!</text>
+              </g>
+            );
+          })()}
+
           {/* Landmark Pins */}
           {landmarks.map((lm) => {
             const lx = mapToPercent(lm.x);
@@ -177,6 +192,12 @@ export const VillageRadar: React.FC<VillageRadarProps> = ({
           <span className="w-2 h-2 rounded-full bg-amber-400 inline-block" />
           Gift
         </span>
+        {activeQuestTarget && (
+          <span className="flex items-center gap-1 text-sky-300">
+            <span className="w-2 h-2 rounded-full bg-sky-400 inline-block" />
+            Dispatch
+          </span>
+        )}
       </div>
     </div>
   );

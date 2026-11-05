@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { BookOpen, Camera, Play, RotateCcw, Settings, Volume2, VolumeX, Wrench } from 'lucide-react';
+import { BookOpen, Camera, Play, Radio, RotateCcw, Settings, Volume2, VolumeX, Wrench } from 'lucide-react';
 
 interface PauseModalProps {
   onResume: () => void;
@@ -11,8 +11,8 @@ interface PauseModalProps {
   onOpenWorkshop: () => void;
   onOpenScrapbook: () => void;
   onOpenPhotoMode: () => void;
+  onOpenDispatchRadio: () => void;
   onOpenSettings: () => void;
-  onPhotoMode: () => void;
   isMuted: boolean;
   onToggleMute: () => void;
   isMusicEnabled: boolean;
@@ -25,8 +25,8 @@ export const PauseModal: React.FC<PauseModalProps> = ({
   onOpenWorkshop,
   onOpenScrapbook,
   onOpenPhotoMode,
+  onOpenDispatchRadio,
   onOpenSettings,
-  onPhotoMode,
   isMuted,
   onToggleMute,
   isMusicEnabled,
@@ -51,11 +51,11 @@ export const PauseModal: React.FC<PauseModalProps> = ({
           </button>
 
           <button
-            onClick={onPhotoMode}
-            className="w-full py-2.5 px-4 rounded-xl bg-purple-950/70 hover:bg-purple-900/80 text-purple-200 font-medium flex items-center justify-center gap-2 border border-purple-800/60 transition-colors cursor-pointer"
+            onClick={onOpenDispatchRadio}
+            className="w-full py-2.5 px-4 rounded-xl bg-sky-950/70 hover:bg-sky-900/80 text-sky-200 font-medium flex items-center justify-center gap-2 border border-sky-800/60 transition-colors cursor-pointer"
           >
-            <Camera className="w-4 h-4 text-purple-400" />
-            <span>Solstice Postcard Photo Studio (P)</span>
+            <Radio className="w-4 h-4 text-sky-400" />
+            <span>Village Dispatches & Solstice Radio (Q)</span>
           </button>
 
           <button
@@ -63,7 +63,7 @@ export const PauseModal: React.FC<PauseModalProps> = ({
             className="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium flex items-center justify-center gap-2 border border-slate-700 transition-colors cursor-pointer"
           >
             <Wrench className="w-4 h-4 text-amber-400" />
-            <span>Solstice Workshop & Upgrades (G)</span>
+            <span>Solstice Workshop & Atelier (G)</span>
           </button>
 
           <button
@@ -120,8 +120,8 @@ export const PauseModal: React.FC<PauseModalProps> = ({
 
         {/* Controls Quick Reference */}
         <div className="p-3 rounded-lg bg-slate-950/60 border border-slate-800 text-[11px] text-slate-400 leading-relaxed text-center">
-          <p><span className="text-slate-200 font-mono font-semibold">WASD / Arrows</span> to steer plow</p>
-          <p><span className="text-slate-200 font-mono font-semibold">Space</span> for Steam Heart Turbo</p>
+          <p><span className="text-slate-200 font-mono font-semibold">WASD / Arrows</span> steer · <span className="text-slate-200 font-mono font-semibold">Space</span> Turbo</p>
+          <p><span className="text-slate-200 font-mono font-semibold">Q</span> Dispatch · <span className="text-slate-200 font-mono font-semibold">R</span> Radio · <span className="text-slate-200 font-mono font-semibold">G</span> Atelier</p>
           <p>Maintain continuous plowing to build <span className="text-rose-400 font-semibold">True Love Combos</span></p>
         </div>
       </div>

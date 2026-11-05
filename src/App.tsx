@@ -5,9 +5,9 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { synthAudio } from './audio/synthAudio';
+import { DispatchRadioModal } from './components/DispatchRadioModal';
 import { GameHUD } from './components/GameHUD';
 import { PauseModal } from './components/PauseModal';
-import { PhotoPostcardModal } from './components/PhotoPostcardModal';
 import { PhotoModeModal } from './components/PhotoModeModal';
 import { ScrapbookModal } from './components/ScrapbookModal';
 import { SettingsModal } from './components/SettingsModal';
@@ -29,7 +29,6 @@ import {
 export default function App() {
   const canvasMountRef = useRef<HTMLDivElement>(null);
   const engineRef = useRef<SnowPlowGameEngine | null>(null);
-  const [snapshotUrl, setSnapshotUrl] = useState<string | null>(null);
 
   // Settings & Audio state
   const [settings, setSettings] = useState<GameSettings>(() => loadGameSettings());
@@ -66,6 +65,14 @@ export default function App() {
     },
     unlockedAchievementIds: [],
     atmosphere: settings.atmosphere || 'twilight',
+    radioStationId: settings.radioStationId || 'val-classic',
+    radioStationName: 'Valentine Solstice FM',
+    activeQuest: null,
+    completedQuestIds: [],
+    selectedPaintId: 'crimson',
+    unlockedPaintIds: ['crimson'],
+    selectedDecalId: 'heart',
+    unlockedDecalIds: ['heart'],
   });
 
   useEffect(() => {
@@ -109,16 +116,53 @@ export default function App() {
     if (newVals.musicVolume !== undefined) synthAudio.setMusicVolume(newVals.musicVolume);
     if (newVals.sfxVolume !== undefined) synthAudio.setSfxVolume(newVals.sfxVolume);
     if (newVals.isMuted !== undefined) synthAudio.setMute(newVals.isMuted);
+    if (newVals.radioStationId !== undefined && engineRef.current) {
+      engineRef.current.setRadioStation(newVals.radioStationId);
+    }
     if (newVals.atmosphere !== undefined && engineRef.current) {
       engineRef.current.applyAtmosphere(newVals.atmosphere);
     }
   };
 
-  const handlePhotoMode = () => {
+  const handleOpenDispatchRadio = () => {
     if (engineRef.current) {
-      const snap = engineRef.current.captureSnapshot();
-      setSnapshotUrl(snap);
-      engineRef.current.setGameState('PHOTO_MODE');
+      engineRef.current.setGameState('DISPATCH_RADIO');
+    }
+  };
+
+  const handleSelectRadioStation = (stationId: string) => {
+    if (engineRef.current) {
+      engineRef.current.setRadioStation(stationId);
+    }
+  };
+
+  const handleCycleRadio = () => {
+    if (engineRef.current) {
+      engineRef.current.cycleRadioStation();
+    }
+  };
+
+  const handleStartQuest = (questId: string) => {
+    if (engineRef.current) {
+      engineRef.current.startQuest(questId);
+    }
+  };
+
+  const handleCancelQuest = () => {
+    if (engineRef.current) {
+      engineRef.current.cancelQuest();
+    }
+  };
+
+  const handleSelectPaint = (paintId: string) => {
+    if (engineRef.current) {
+      engineRef.current.purchasePaint(paintId);
+    }
+  };
+
+  const handleSelectDecal = (decalId: string) => {
+    if (engineRef.current) {
+      engineRef.current.purchaseDecal(decalId);
     }
   };
 
@@ -216,6 +260,7 @@ export default function App() {
           onStart={handleStartGame}
           isMuted={settings.isMuted}
           onToggleMute={handleToggleMute}
+          onOpenDispatchRadio={handleOpenDispatchRadio}
           onOpenScrapbook={handleOpenScrapbook}
           onOpenSettings={handleOpenSettings}
         />
@@ -228,13 +273,28 @@ export default function App() {
           onOpenWorkshop={handleOpenWorkshop}
           onOpenScrapbook={handleOpenScrapbook}
           onOpenPhotoMode={handleOpenPhotoMode}
+          onOpenDispatchRadio={handleOpenDispatchRadio}
           onOpenSettings={handleOpenSettings}
-          onPhotoMode={handlePhotoMode}
           onPause={handlePause}
+          onCycleRadio={handleCycleRadio}
           isMuted={settings.isMuted}
           onToggleMute={handleToggleMute}
           showRadar={settings.showRadar}
           onVirtualInput={handleVirtualInput}
+        />
+      )}
+
+      {/* 3.5 Solstice Emergency Dispatch & Radio Modal */}
+      {stats.gameState === 'DISPATCH_RADIO' && (
+        <DispatchRadioModal
+          radioStationId={stats.radioStationId}
+          activeQuest={stats.activeQuest}
+          completedQuestIds={stats.completedQuestIds}
+          loveLetters={stats.loveLetters}
+          onSelectRadioStation={handleSelectRadioStation}
+          onStartQuest={handleStartQuest}
+          onCancelQuest={handleCancelQuest}
+          onClose={handleResume}
         />
       )}
 
@@ -243,7 +303,13 @@ export default function App() {
         <ShopModal
           loveLetters={stats.loveLetters}
           upgrades={stats.upgrades}
+          selectedPaintId={stats.selectedPaintId}
+          unlockedPaintIds={stats.unlockedPaintIds}
+          selectedDecalId={stats.selectedDecalId}
+          unlockedDecalIds={stats.unlockedDecalIds}
           onBuyUpgrade={handleBuyUpgrade}
+          onSelectPaint={handleSelectPaint}
+          onSelectDecal={handleSelectDecal}
           onClose={handleResume}
         />
       )}
@@ -254,10 +320,10 @@ export default function App() {
           onResume={handleResume}
           onRestart={handleRestart}
           onOpenWorkshop={handleOpenWorkshop}
+          onOpenDispatchRadio={handleOpenDispatchRadio}
           onOpenScrapbook={handleOpenScrapbook}
           onOpenPhotoMode={handleOpenPhotoMode}
           onOpenSettings={handleOpenSettings}
-          onPhotoMode={handlePhotoMode}
           isMuted={settings.isMuted}
           onToggleMute={handleToggleMute}
           isMusicEnabled={isMusicEnabled}
@@ -290,17 +356,6 @@ export default function App() {
 
       {/* 7. Solstice Postcard Photo Mode Modal */}
       {/* 8. Solstice Postcard Photo Mode Modal */}
-      {stats.gameState === 'PHOTO_MODE' && (
-        <PhotoPostcardModal
-          photoDataUrl={snapshotUrl}
-          onClose={handleResume}
-          onPostcardSaved={() => {
-            if (engineRef.current) {
-              engineRef.current.checkAchievement('shutterbug');
-            }
-          }}
-        />
-      )}
 
       {/* 8. Settings Modal */}
       {stats.gameState === 'SETTINGS' && (

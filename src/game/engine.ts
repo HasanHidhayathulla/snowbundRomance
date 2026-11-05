@@ -11,17 +11,26 @@ import {
   ACHIEVEMENTS,
   COMBO_LEVELS,
   LANDMARKS,
+  RADIO_STATIONS,
   ROMANTIC_GIFTS,
+  SOLSTICE_QUESTS,
+  TRACTOR_DECALS,
+  TRACTOR_PAINTS,
   UPGRADES,
   WORLD_SIZE,
   type GameState,
   type Landmark,
+  type RadioStation,
   type RomanticGift,
+  type SolsticeQuest,
+  type TractorDecal,
+  type TractorPaint,
 } from './constants';
 import {
   loadGameProgress,
   saveGameProgress,
   loadGameSettings,
+  saveGameSettings,
   type SolsticeAtmosphere,
 } from './storage';
 import {
@@ -37,6 +46,13 @@ import {
 } from './models';
 import { ParticleSystem } from './particleSystem';
 import { SnowGridSystem } from './snowGrid';
+
+export interface ActiveQuestState {
+  quest: SolsticeQuest;
+  remainingSec: number;
+  distanceToTarget: number;
+  progressPercent: number;
+}
 
 export interface GameHUDStats {
   gameState: GameState;
@@ -61,6 +77,14 @@ export interface GameHUDStats {
   gifts: RomanticGift[];
   unlockedAchievementIds: string[];
   atmosphere: SolsticeAtmosphere;
+  radioStationId: string;
+  radioStationName: string;
+  activeQuest: ActiveQuestState | null;
+  completedQuestIds: string[];
+  selectedPaintId: string;
+  unlockedPaintIds: string[];
+  selectedDecalId: string;
+  unlockedDecalIds: string[];
 }
 
 import {
@@ -89,6 +113,9 @@ export class SnowPlowGameEngine {
   private exhaustStack!: THREE.Mesh;
   private headlampL!: THREE.SpotLight;
   private headlampR!: THREE.SpotLight;
+  private tractorBodyMesh!: THREE.Mesh;
+  private tractorRoofMesh!: THREE.Mesh;
+  private tractorEmblemMesh!: THREE.Mesh;
 
   // Lighting References for Atmosphere
   private hemiLight!: THREE.HemisphereLight;
@@ -127,6 +154,16 @@ export class SnowPlowGameEngine {
   };
   private unlockedAchievementIds: string[] = [];
 
+  // Quests & Radio & Livery State
+  private radioStationId: string = 'val-classic';
+  private activeQuest: ActiveQuestState | null = null;
+  private completedQuestIds: string[] = [];
+  private selectedPaintId: string = 'crimson';
+  private unlockedPaintIds: string[] = ['crimson'];
+  private selectedDecalId: string = 'heart';
+  private unlockedDecalIds: string[] = ['heart'];
+  private questBeaconGroup!: THREE.Group;
+
   // World Elements
   private landmarks: Landmark[] = [];
   private landmarkMeshes: Map<string, THREE.Group> = new Map();
@@ -162,6 +199,12 @@ export class SnowPlowGameEngine {
     // Load saved settings
     const settings = loadGameSettings();
     this.atmosphere = settings.atmosphere || 'twilight';
+    this.radioStationId = settings.radioStationId || 'val-classic';
+    this.completedQuestIds = saved.completedQuestIds || [];
+    this.unlockedPaintIds = saved.unlockedPaintIds || ['crimson'];
+    this.selectedPaintId = saved.selectedPaintId || 'crimson';
+    this.unlockedDecalIds = saved.unlockedDecalIds || ['heart'];
+    this.selectedDecalId = saved.selectedDecalId || 'heart';
 
     this.initWebGL();
     this.initScene();
@@ -261,7 +304,10 @@ export class SnowPlowGameEngine {
     }
 
     // 4. Hero Tractor
-    const tractorData = createHeartPlowTractor();
+    const currentPaint = TRACTOR_PAINTS.find((p) => p.id === this.selectedPaintId) || TRACTOR_PAINTS[0];
+    const currentDecal = TRACTOR_DECALS.find((d) => d.id === this.selectedDecalId) || TRACTOR_DECALS[0];
+
+    const tractorData = createHeartPlowTractor(currentPaint.colorHex, currentDecal.colorHex);
     this.tractorGroup = tractorData.group;
     this.plowBladeGroup = tractorData.plowGroup;
     this.frontWheels = tractorData.wheelsFront;
@@ -269,13 +315,63 @@ export class SnowPlowGameEngine {
     this.exhaustStack = tractorData.exhaustStack;
     this.headlampL = tractorData.headlightL;
     this.headlampR = tractorData.headlightR;
+    this.tractorBodyMesh = tractorData.bodyMesh;
+    this.tractorRoofMesh = tractorData.roofMesh;
+    this.tractorEmblemMesh = tractorData.emblemMesh;
 
     this.tractorGroup.position.set(0, 0, 0);
     this.scene.add(this.tractorGroup);
 
+    // 5. Waypoint / Quest Beacon Mesh
+    this.initQuestBeacon();
+
     if (!this.isSoftwareGl) {
       this.renderer.compile(this.scene, this.camera);
     }
+  }
+
+  private initQuestBeacon() {
+    this.questBeaconGroup = new THREE.Group();
+    this.questBeaconGroup.visible = false;
+
+    // Glowing pulsating ring on the snow
+    const ringGeo = new THREE.RingGeometry(2.8, 3.2, 32);
+    ringGeo.rotateX(-Math.PI / 2);
+    const ringMat = new THREE.MeshBasicMaterial({
+      color: 0x38bdf8,
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.8,
+    });
+    const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+    ringMesh.position.y = 0.12;
+    this.questBeaconGroup.add(ringMesh);
+
+    // Floating vertical beacon cylinder / column
+    const cylGeo = new THREE.CylinderGeometry(0.35, 1.8, 6.0, 16, 1, true);
+    const cylMat = new THREE.MeshBasicMaterial({
+      color: 0x38bdf8,
+      transparent: true,
+      opacity: 0.25,
+      side: THREE.DoubleSide,
+    });
+    const cyl = new THREE.Mesh(cylGeo, cylMat);
+    cyl.position.y = 3.0;
+    this.questBeaconGroup.add(cyl);
+
+    // Floating diamond insignia at top
+    const octaGeo = new THREE.OctahedronGeometry(0.7, 0);
+    const octaMat = new THREE.MeshStandardMaterial({
+      color: 0x38bdf8,
+      emissive: 0x0284c7,
+      emissiveIntensity: 1.2,
+      roughness: 0.2,
+    });
+    const diamond = new THREE.Mesh(octaGeo, octaMat);
+    diamond.position.y = 6.2;
+    this.questBeaconGroup.add(diamond);
+
+    this.scene.add(this.questBeaconGroup);
   }
 
   private initWorldEntities() {
@@ -438,8 +534,20 @@ export class SnowPlowGameEngine {
       if (e.code === 'KeyP') {
         if (this.gameState === 'PLAYING') {
           this.setGameState('PHOTO');
-        } else if (this.gameState === 'PHOTO' || this.gameState === 'PHOTO_MODE') {
+        } else if (this.gameState === 'PHOTO') {
           this.setGameState('PLAYING');
+        }
+      }
+      if (e.code === 'KeyQ') {
+        if (this.gameState === 'PLAYING') {
+          this.setGameState('DISPATCH_RADIO');
+        } else if (this.gameState === 'DISPATCH_RADIO') {
+          this.setGameState('PLAYING');
+        }
+      }
+      if (e.code === 'KeyR') {
+        if (this.gameState === 'PLAYING') {
+          this.cycleRadioStation();
         }
       }
     });
@@ -615,12 +723,110 @@ export class SnowPlowGameEngine {
     return false;
   }
 
+  public setRadioStation(stationId: string) {
+    this.radioStationId = stationId;
+    synthAudio.setRadioStation(stationId);
+    saveGameSettings({ radioStationId: stationId });
+    this.checkAchievement('radio_enthusiast');
+    const station = RADIO_STATIONS.find((s) => s.id === stationId);
+    if (station) {
+      this.triggerMessage(`📻 Tuned to ${station.name} (${station.frequency})`);
+    }
+    this.pushHUDUpdate();
+  }
+
+  public cycleRadioStation() {
+    const idx = RADIO_STATIONS.findIndex((s) => s.id === this.radioStationId);
+    const nextIdx = (idx + 1) % RADIO_STATIONS.length;
+    this.setRadioStation(RADIO_STATIONS[nextIdx].id);
+  }
+
+  public startQuest(questId: string): boolean {
+    const quest = SOLSTICE_QUESTS.find((q) => q.id === questId);
+    if (!quest) return false;
+
+    this.activeQuest = {
+      quest,
+      remainingSec: quest.timeLimitSec,
+      distanceToTarget: Math.hypot(quest.targetX - this.posX, quest.targetZ - this.posZ),
+      progressPercent: 0,
+    };
+
+    // Position waypoint beacon
+    this.questBeaconGroup.position.set(quest.targetX, 0, quest.targetZ);
+    this.questBeaconGroup.visible = true;
+
+    synthAudio.playQuestStart();
+    this.triggerMessage(`🚨 New Dispatch: ${quest.title}! (${quest.timeLimitSec}s)`);
+    this.setGameState('PLAYING');
+    return true;
+  }
+
+  public cancelQuest() {
+    this.activeQuest = null;
+    this.questBeaconGroup.visible = false;
+    this.triggerMessage('Dispatch cancelled.');
+    this.pushHUDUpdate();
+  }
+
+  public purchasePaint(paintId: string): boolean {
+    const paint = TRACTOR_PAINTS.find((p) => p.id === paintId);
+    if (!paint) return false;
+
+    if (!this.unlockedPaintIds.includes(paintId)) {
+      if (this.loveLetters < paint.cost) return false;
+      this.loveLetters -= paint.cost;
+      this.unlockedPaintIds.push(paintId);
+    }
+
+    this.selectedPaintId = paintId;
+    if (this.tractorBodyMesh && this.tractorBodyMesh.material instanceof THREE.MeshStandardMaterial) {
+      this.tractorBodyMesh.material.color.setHex(paint.colorHex);
+    }
+
+    this.checkAchievement('atelier_customizer');
+    synthAudio.playUpgradeSound();
+    this.triggerMessage(`Painted Heartplow with ${paint.name}!`);
+    this.saveProgressState();
+    this.pushHUDUpdate();
+    return true;
+  }
+
+  public purchaseDecal(decalId: string): boolean {
+    const decal = TRACTOR_DECALS.find((d) => d.id === decalId);
+    if (!decal) return false;
+
+    if (!this.unlockedDecalIds.includes(decalId)) {
+      if (this.loveLetters < decal.cost) return false;
+      this.loveLetters -= decal.cost;
+      this.unlockedDecalIds.push(decalId);
+    }
+
+    this.selectedDecalId = decalId;
+    if (this.tractorEmblemMesh && this.tractorEmblemMesh.material instanceof THREE.MeshStandardMaterial) {
+      this.tractorEmblemMesh.material.color.setHex(decal.colorHex);
+      this.tractorEmblemMesh.material.emissive.setHex(decal.colorHex);
+    }
+
+    this.checkAchievement('atelier_customizer');
+    synthAudio.playUpgradeSound();
+    this.triggerMessage(`Applied ${decal.name} to Heartplow!`);
+    this.saveProgressState();
+    this.pushHUDUpdate();
+    return true;
+  }
+
   private saveProgressState() {
     saveGameProgress({
       loveLetters: this.loveLetters,
       upgrades: { ...this.upgrades },
       clearedLandmarkIds: this.landmarks.filter((l) => l.cleared).map((l) => l.id),
       unlockedGiftIds: this.gifts.filter((g) => g.collected).map((g) => g.id),
+      completedQuestIds: [...this.completedQuestIds],
+      unlockedPaintIds: [...this.unlockedPaintIds],
+      selectedPaintId: this.selectedPaintId,
+      unlockedDecalIds: [...this.unlockedDecalIds],
+      selectedDecalId: this.selectedDecalId,
     });
   }
 
@@ -899,6 +1105,53 @@ export class SnowPlowGameEngine {
     // Update continuous audio
     synthAudio.updateVehicleAudio(speedRatio, this.isPlowing, this.isBoosting);
 
+    // 3.5 Active Quest simulation & Waypoint beacon update
+    if (this.activeQuest) {
+      const q = this.activeQuest.quest;
+      this.activeQuest.remainingSec -= dt;
+      const dist = Math.hypot(q.targetX - this.posX, q.targetZ - this.posZ);
+      this.activeQuest.distanceToTarget = Math.round(dist);
+
+      // Animate Beacon
+      if (this.questBeaconGroup.visible) {
+        this.questBeaconGroup.rotation.y += 1.5 * dt;
+        const diamond = this.questBeaconGroup.children[2];
+        if (diamond) diamond.position.y = 6.0 + Math.sin(performance.now() * 0.005) * 0.4;
+      }
+
+      // Check clearing progress if required
+      if (q.requiredClearRatio) {
+        const clearedRatio = this.snowGrid.getRegionClearedRatio(q.targetX, q.targetZ, q.targetRadius);
+        this.activeQuest.progressPercent = Math.min(100, Math.round((clearedRatio / q.requiredClearRatio) * 100));
+
+        if (clearedRatio >= q.requiredClearRatio && dist <= q.targetRadius + 1) {
+          // Success!
+          this.completeCurrentQuest();
+        }
+      } else {
+        // Delivery / Rescue reached
+        this.activeQuest.progressPercent = Math.min(100, Math.round(Math.max(0, 1 - dist / 50) * 100));
+        if (dist <= q.targetRadius) {
+          this.completeCurrentQuest();
+        }
+      }
+
+      // Urgent ticking warning when time < 10s
+      if (this.activeQuest && this.activeQuest.remainingSec <= 10 && this.activeQuest.remainingSec > 0) {
+        if (Math.floor(this.activeQuest.remainingSec) !== Math.floor(this.activeQuest.remainingSec + dt)) {
+          synthAudio.playQuestTick();
+        }
+      }
+
+      // Quest failed timeout
+      if (this.activeQuest && this.activeQuest.remainingSec <= 0) {
+        this.triggerMessage(`⏳ Time's up! Dispatch "${q.title}" expired.`);
+        this.activeQuest = null;
+        this.questBeaconGroup.visible = false;
+        this.pushHUDUpdate();
+      }
+    }
+
     // 4. Buried Gifts Collection
     this.gifts.forEach((gift) => {
       if (gift.collected) return;
@@ -1029,6 +1282,27 @@ export class SnowPlowGameEngine {
     this.camera.lookAt(lookTarget);
   }
 
+  private completeCurrentQuest() {
+    if (!this.activeQuest) return;
+    const q = this.activeQuest.quest;
+
+    if (!this.completedQuestIds.includes(q.id)) {
+      this.completedQuestIds.push(q.id);
+    }
+    this.loveLetters += q.rewardLetters;
+    this.checkAchievement('first_dispatch');
+
+    synthAudio.playQuestSuccess();
+    this.hitstopDuration = 0.08;
+    this.particles.emitRomanticHearts(this.posX, 2.0, this.posZ, 25);
+    this.triggerMessage(`✅ Dispatch Completed! ${q.dialogueSuccess} (+${q.rewardLetters} Letters)`);
+
+    this.activeQuest = null;
+    this.questBeaconGroup.visible = false;
+    this.saveProgressState();
+    this.pushHUDUpdate();
+  }
+
   private pushHUDUpdate() {
     if (!this.onHUDUpdate) return;
 
@@ -1038,6 +1312,8 @@ export class SnowPlowGameEngine {
 
     const clearedLandmarks = this.landmarks.filter((l) => l.cleared).length;
     const collectedGifts = this.gifts.filter((g) => g.collected).length;
+
+    const station = RADIO_STATIONS.find((s) => s.id === this.radioStationId) || RADIO_STATIONS[0];
 
     this.onHUDUpdate({
       gameState: this.gameState,
@@ -1062,6 +1338,14 @@ export class SnowPlowGameEngine {
       gifts: this.gifts.map((g) => ({ ...g })),
       unlockedAchievementIds: [...this.unlockedAchievementIds],
       atmosphere: this.atmosphere,
+      radioStationId: this.radioStationId,
+      radioStationName: station.name,
+      activeQuest: this.activeQuest ? { ...this.activeQuest } : null,
+      completedQuestIds: [...this.completedQuestIds],
+      selectedPaintId: this.selectedPaintId,
+      unlockedPaintIds: [...this.unlockedPaintIds],
+      selectedDecalId: this.selectedDecalId,
+      unlockedDecalIds: [...this.unlockedDecalIds],
     });
   }
 
@@ -1069,6 +1353,7 @@ export class SnowPlowGameEngine {
     const currentCombo = COMBO_LEVELS[this.comboLevel - 1] || COMBO_LEVELS[0];
     const comboTier = UPGRADES.comboTimer.tiers[this.upgrades.comboTimer - 1];
     const comboWindow = comboTier.statValue;
+    const station = RADIO_STATIONS.find((s) => s.id === this.radioStationId) || RADIO_STATIONS[0];
     return {
       gameState: this.gameState,
       snowClearedPercent: this.snowClearedPercent,
@@ -1092,6 +1377,14 @@ export class SnowPlowGameEngine {
       gifts: this.gifts.map((g) => ({ ...g })),
       unlockedAchievementIds: [...this.unlockedAchievementIds],
       atmosphere: this.atmosphere,
+      radioStationId: this.radioStationId,
+      radioStationName: station.name,
+      activeQuest: this.activeQuest ? { ...this.activeQuest } : null,
+      completedQuestIds: [...this.completedQuestIds],
+      selectedPaintId: this.selectedPaintId,
+      unlockedPaintIds: [...this.unlockedPaintIds],
+      selectedDecalId: this.selectedDecalId,
+      unlockedDecalIds: [...this.unlockedDecalIds],
     };
   }
 

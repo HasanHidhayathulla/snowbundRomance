@@ -12,6 +12,7 @@ export interface GameSettings {
   showRadar: boolean;
   radarZoom: number;    // 1.0 = standard, 1.5 = wide
   atmosphere: SolsticeAtmosphere;
+  radioStationId: string;
 }
 
 export interface SavedPostcard {
@@ -34,6 +35,11 @@ export interface PersistentProgress {
   totalCellsPlowed: number;
   postcardsCaptured: number;
   totalSnowPlowedHectares: number;
+  completedQuestIds: string[];
+  unlockedPaintIds: string[];
+  selectedPaintId: string;
+  unlockedDecalIds: string[];
+  selectedDecalId: string;
   savedPostcards?: SavedPostcard[];
 }
 
@@ -49,6 +55,7 @@ export const DEFAULT_SETTINGS: GameSettings = {
   showRadar: true,
   radarZoom: 1.0,
   atmosphere: 'twilight',
+  radioStationId: 'val-classic',
 };
 
 export const DEFAULT_PROGRESS: PersistentProgress = {
@@ -67,6 +74,11 @@ export const DEFAULT_PROGRESS: PersistentProgress = {
   totalCellsPlowed: 0,
   postcardsCaptured: 0,
   totalSnowPlowedHectares: 0,
+  completedQuestIds: [],
+  unlockedPaintIds: ['crimson'],
+  selectedPaintId: 'crimson',
+  unlockedDecalIds: ['heart'],
+  selectedDecalId: 'heart',
 };
 
 export function loadGameSettings(): GameSettings {

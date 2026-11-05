@@ -2,7 +2,156 @@
  * Game constants, upgrade definitions, collectibles, and balance parameters
  */
 
-export type GameState = 'TITLE' | 'PLAYING' | 'PAUSED' | 'GARAGE' | 'VICTORY' | 'SCRAPBOOK' | 'SETTINGS' | 'PHOTO' | 'PHOTO_MODE';
+export type GameState = 'TITLE' | 'PLAYING' | 'PAUSED' | 'GARAGE' | 'VICTORY' | 'SCRAPBOOK' | 'SETTINGS' | 'PHOTO' | 'DISPATCH_RADIO';
+
+export interface SolsticeQuest {
+  id: string;
+  title: string;
+  requester: string;
+  category: 'delivery' | 'clearing' | 'rescue';
+  description: string;
+  targetX: number;
+  targetZ: number;
+  targetRadius: number;
+  timeLimitSec: number;
+  rewardLetters: number;
+  dialogueSuccess: string;
+  requiredClearRatio?: number;
+}
+
+export const SOLSTICE_QUESTS: SolsticeQuest[] = [
+  {
+    id: 'quest_cinnamon_delivery',
+    title: 'Warm Cinnamon Delivery',
+    requester: 'Julien the Baker',
+    category: 'delivery',
+    description: 'Rush freshly baked hot cinnamon rolls from the Bakery to Lovers’ Bridge before they turn cold!',
+    targetX: 0,
+    targetZ: -18,
+    targetRadius: 7.0,
+    timeLimitSec: 65,
+    rewardLetters: 45,
+    dialogueSuccess: '“They arrived still steaming! You made our bridge solstice date magical!”',
+  },
+  {
+    id: 'quest_square_clearing',
+    title: 'Grand Tree Festival Rush',
+    requester: 'Mayor Holly',
+    category: 'clearing',
+    description: 'Plow the perimeter road leading to the Grand Solstice Tree so the festive choir can set up their songbooks!',
+    targetX: 12,
+    targetZ: 0,
+    targetRadius: 9.0,
+    timeLimitSec: 75,
+    rewardLetters: 60,
+    dialogueSuccess: '“The choir is assembled, and the Solstice carols are echoing across the snow!”',
+    requiredClearRatio: 0.7,
+  },
+  {
+    id: 'quest_lost_music_box',
+    title: 'Lost Keepsake Rescue',
+    requester: 'Grandma Clara',
+    category: 'rescue',
+    description: 'A sentimental vintage music box was dropped in deep snowdrifts near the North Pines. Rush over to locate it!',
+    targetX: -24,
+    targetZ: -20,
+    targetRadius: 6.5,
+    timeLimitSec: 50,
+    rewardLetters: 50,
+    dialogueSuccess: '“My grandmother’s waltz music box! Oh, thank you, our holiday is saved!”',
+  },
+  {
+    id: 'quest_clocktower_chime',
+    title: 'Clocktower Midnight Path',
+    requester: 'Archivist Noel',
+    category: 'clearing',
+    description: 'Clear the snow blockade blocking the Alpine Starlight Clocktower steps before midnight bells begin!',
+    targetX: -20,
+    targetZ: -16,
+    targetRadius: 7.5,
+    timeLimitSec: 70,
+    rewardLetters: 55,
+    dialogueSuccess: '“Hear that chime? Every lover in the valley just looked up at the stars!”',
+    requiredClearRatio: 0.65,
+  },
+];
+
+export interface RadioStation {
+  id: string;
+  name: string;
+  frequency: string;
+  tagline: string;
+  theme: 'solstice-folk' | 'aurora-ambient' | 'blizzard-alert' | 'lofi-cabin';
+  accentColor: string;
+}
+
+export const RADIO_STATIONS: RadioStation[] = [
+  {
+    id: 'val-classic',
+    name: 'Valentine Solstice FM',
+    frequency: '94.3 MHz',
+    tagline: 'Cozy fireside folk melodies and warm acoustic harmonies for winter nights.',
+    theme: 'solstice-folk',
+    accentColor: '#fb7185',
+  },
+  {
+    id: 'val-aurora',
+    name: 'Aurora Dream Radio',
+    frequency: '102.7 MHz',
+    tagline: 'Shimmering celestial synth pads inspired by the dancing northern green skies.',
+    theme: 'aurora-ambient',
+    accentColor: '#34d399',
+  },
+  {
+    id: 'val-lofi',
+    name: 'Snowed-In Cabin Lo-Fi',
+    frequency: '88.1 MHz',
+    tagline: 'Mellow winter beats, tape warmth, and mellow jazzy solstice chords.',
+    theme: 'lofi-cabin',
+    accentColor: '#c084fc',
+  },
+  {
+    id: 'val-dispatch',
+    name: 'Valley Weather & Dispatch',
+    frequency: '106.9 MHz',
+    tagline: 'Live Solstice blizzard updates, urgent plow requests, and road warnings.',
+    theme: 'blizzard-alert',
+    accentColor: '#38bdf8',
+  },
+];
+
+export interface TractorPaint {
+  id: string;
+  name: string;
+  colorHex: number;
+  finish: string;
+  cost: number;
+  desc: string;
+}
+
+export const TRACTOR_PAINTS: TractorPaint[] = [
+  { id: 'crimson', name: 'Valentine Crimson', colorHex: 0xbe123c, finish: 'Ruby Gloss', cost: 0, desc: 'Classic romantic red with warm amber undertones.' },
+  { id: 'aurora-emerald', name: 'Aurora Borealis', colorHex: 0x059669, finish: 'Pearlescent Teal', cost: 35, desc: 'Iridescent forest emerald glowing with northern lights.' },
+  { id: 'midnight-navy', name: 'Solstice Midnight', colorHex: 0x1e1b4b, finish: 'Deep Velvet', cost: 45, desc: 'Quiet midnight indigo reminiscent of starry winter skies.' },
+  { id: 'rose-gold', name: 'Candlelight Rose', colorHex: 0xdb2777, finish: 'Metallic Blush', cost: 60, desc: 'Glamorous champagne pink with golden reflections.' },
+  { id: 'frost-silver', name: 'Glacial Titanium', colorHex: 0x475569, finish: 'Satin Alloy', cost: 75, desc: 'Industrial frosted steel with reflective blizzard armor.' },
+];
+
+export interface TractorDecal {
+  id: string;
+  name: string;
+  iconName: string;
+  colorHex: number;
+  cost: number;
+  desc: string;
+}
+
+export const TRACTOR_DECALS: TractorDecal[] = [
+  { id: 'heart', name: 'True Love Crest', iconName: 'Heart', colorHex: 0xf43f5e, cost: 0, desc: 'Iconic glowing pink heart insignia.' },
+  { id: 'snowflake', name: 'Solstice Snowflake', iconName: 'Snowflake', colorHex: 0x38bdf8, cost: 25, desc: 'Six-pointed crystalline star of the winter solstice.' },
+  { id: 'flame', name: 'Eternal Hearth', iconName: 'Flame', colorHex: 0xf59e0b, cost: 40, desc: 'Golden flame emblem that radiates warmth in freezing drifts.' },
+  { id: 'sparkles', name: 'Starlight Garland', iconName: 'Sparkles', colorHex: 0xe879f9, cost: 55, desc: 'Twinkling constellation celebrating reunited lovers.' },
+];
 
 export interface UpgradeTier {
   level: number;
@@ -241,6 +390,27 @@ export const ACHIEVEMENTS: SolsticeAchievement[] = [
     description: 'Clear all 4 landmarks and bring all lovers together.',
     icon: 'Sparkles',
     rewardLetters: 100,
+  },
+  {
+    id: 'first_dispatch',
+    title: 'Solstice Courier',
+    description: 'Complete your first emergency village dispatch quest.',
+    icon: 'Zap',
+    rewardLetters: 35,
+  },
+  {
+    id: 'radio_enthusiast',
+    title: 'Valley Broadcast Tuner',
+    description: 'Tune into different Solstice Radio stations on the plow radio.',
+    icon: 'Music',
+    rewardLetters: 25,
+  },
+  {
+    id: 'atelier_customizer',
+    title: 'Atelier Artisan',
+    description: 'Customize your Heartplow tractor with a new livery paint job.',
+    icon: 'Flame',
+    rewardLetters: 30,
   },
 ];
 

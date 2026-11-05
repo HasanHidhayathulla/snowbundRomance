@@ -5,13 +5,14 @@
  */
 
 import React from 'react';
-import { BookOpen, Heart, Settings, Sparkles, Volume2, VolumeX } from 'lucide-react';
+import { BookOpen, Heart, Radio, Settings, Sparkles, Volume2, VolumeX } from 'lucide-react';
 import { synthAudio } from '../audio/synthAudio';
 
 interface TitleScreenProps {
   onStart: () => void;
   isMuted: boolean;
   onToggleMute: () => void;
+  onOpenDispatchRadio?: () => void;
   onOpenScrapbook: () => void;
   onOpenSettings: () => void;
 }
@@ -20,6 +21,7 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
   onStart,
   isMuted,
   onToggleMute,
+  onOpenDispatchRadio,
   onOpenScrapbook,
   onOpenSettings,
 }) => {
@@ -33,6 +35,16 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
+          {onOpenDispatchRadio && (
+            <button
+              onClick={onOpenDispatchRadio}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-slate-900/80 border border-slate-700/60 hover:bg-slate-800 text-xs text-sky-300 transition-colors cursor-pointer"
+            >
+              <Radio className="w-3.5 h-3.5 text-sky-400" />
+              <span>Radio</span>
+            </button>
+          )}
+
           <button
             onClick={onOpenScrapbook}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-slate-900/80 border border-slate-700/60 hover:bg-slate-800 text-xs text-rose-300 transition-colors cursor-pointer"
@@ -140,11 +152,15 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
       {/* Flat Control Hint Line */}
       <div className="w-full max-w-3xl flex justify-center items-center py-2 px-4 rounded-lg bg-slate-900/85 border border-slate-800 text-slate-300 text-xs tracking-wider">
         <span className="font-mono text-slate-200 font-semibold">WASD / Arrows</span> Move
-        <span className="mx-3 text-slate-600">·</span>
-        <span className="font-mono text-slate-200 font-semibold">Space</span> Steam Boost
-        <span className="mx-3 text-slate-600">·</span>
-        <span className="font-mono text-slate-200 font-semibold">G</span> Solstice Workshop
-        <span className="mx-3 text-slate-600">·</span>
+        <span className="mx-2 text-slate-600">·</span>
+        <span className="font-mono text-slate-200 font-semibold">Space</span> Boost
+        <span className="mx-2 text-slate-600">·</span>
+        <span className="font-mono text-slate-200 font-semibold">Q</span> Dispatch
+        <span className="mx-2 text-slate-600">·</span>
+        <span className="font-mono text-slate-200 font-semibold">R</span> Radio
+        <span className="mx-2 text-slate-600">·</span>
+        <span className="font-mono text-slate-200 font-semibold">G</span> Atelier
+        <span className="mx-2 text-slate-600">·</span>
         <span className="font-mono text-slate-200 font-semibold">Esc</span> Pause
       </div>
     </div>

@@ -124,7 +124,7 @@ export const materials = {
  * Creates the Hero Snowplow Tractor ("The Heartplow")
  * 12-part procedural composite model
  */
-export function createHeartPlowTractor(): {
+export function createHeartPlowTractor(initialPaintColor: number = 0xbe123c, initialDecalColor: number = 0xf43f5e): {
   group: THREE.Group;
   plowGroup: THREE.Group;
   wheelsFront: THREE.Group[];
@@ -132,9 +132,20 @@ export function createHeartPlowTractor(): {
   exhaustStack: THREE.Mesh;
   headlightL: THREE.SpotLight;
   headlightR: THREE.SpotLight;
+  bodyMesh: THREE.Mesh;
+  roofMesh: THREE.Mesh;
+  emblemMesh: THREE.Mesh;
 } {
   const group = new THREE.Group();
   group.name = 'HeartPlow';
+
+  // Dynamic Paint Material cloned for livery support
+  const paintMat = materials.tractorPaint.clone();
+  paintMat.color.setHex(initialPaintColor);
+
+  const decalMat = materials.loveHeartPink.clone();
+  decalMat.color.setHex(initialDecalColor);
+  decalMat.emissive.setHex(initialDecalColor);
 
   // 1. Lower Chassis Frame (Heavy iron undercarriage)
   const chassisGeo = new THREE.BoxGeometry(1.4, 0.45, 2.6);
@@ -144,9 +155,9 @@ export function createHeartPlowTractor(): {
   chassisMesh.receiveShadow = true;
   group.add(chassisMesh);
 
-  // 2. Engine Hood (Crimson curved hood)
+  // 2. Engine Hood (Curved hood with custom paint)
   const hoodGeo = new THREE.BoxGeometry(1.2, 0.7, 1.4);
-  const hoodMesh = new THREE.Mesh(hoodGeo, materials.tractorPaint);
+  const hoodMesh = new THREE.Mesh(hoodGeo, paintMat);
   hoodMesh.position.set(0, 0.85, 0.6);
   hoodMesh.castShadow = true;
   hoodMesh.receiveShadow = true;
@@ -314,7 +325,7 @@ export function createHeartPlowTractor(): {
   const heartGeo = new THREE.ExtrudeGeometry(heartShape, { depth: 0.08, bevelEnabled: true, bevelThickness: 0.02, bevelSize: 0.02 });
   heartGeo.scale(0.4, 0.4, 0.4);
   heartGeo.rotateZ(Math.PI);
-  const heartEmblem = new THREE.Mesh(heartGeo, materials.loveHeartPink);
+  const heartEmblem = new THREE.Mesh(heartGeo, decalMat);
   heartEmblem.position.set(0, 0.95, 1.42);
   group.add(heartEmblem);
 
@@ -350,6 +361,9 @@ export function createHeartPlowTractor(): {
     exhaustStack,
     headlightL,
     headlightR,
+    bodyMesh: hoodMesh,
+    roofMesh,
+    emblemMesh: heartEmblem,
   };
 }
 

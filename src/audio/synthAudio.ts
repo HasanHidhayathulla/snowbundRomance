@@ -30,9 +30,10 @@ class SynthAudioEngine {
   private snowNoiseFilter: BiquadFilterNode | null = null;
   private noiseBuffer: AudioBuffer | null = null;
 
-  // Music state
+  // Music state & Radio stations
   private musicIntervalId: number | null = null;
   private chordIndex: number = 0;
+  private currentStationId: string = 'val-classic';
 
   constructor() {
     // AudioContext will be initialized upon first user interaction
@@ -349,44 +350,83 @@ class SynthAudioEngine {
   }
 
   /**
-   * Ambient romantic winter synth music loop
-   * Cozy chord progression: Fmaj9 -> G6 -> Em7 -> Am7
+   * Ambient romantic winter synth music loop with multiple radio stations
    */
   private startAmbientMusic() {
     if (this.musicIntervalId !== null) return;
 
-    const chords = [
-      [174.61, 261.63, 329.63, 392.0], // F2, C3, E3, G3 (Fmaj9)
-      [196.0, 246.94, 293.66, 329.63], // G2, B2, D3, E3 (G6)
-      [164.81, 246.94, 329.63, 392.0], // E2, B2, E3, G3 (Em7)
-      [220.0, 261.63, 329.63, 440.0]   // A2, C3, E3, A3 (Am7)
+    // Different musical station voicings
+    const folkChords = [
+      [174.61, 261.63, 329.63, 392.0], // Fmaj9
+      [196.0, 246.94, 293.66, 329.63], // G6
+      [164.81, 246.94, 329.63, 392.0], // Em7
+      [220.0, 261.63, 329.63, 440.0],  // Am7
+    ];
+
+    const auroraChords = [
+      [130.81, 196.0, 293.66, 392.0, 587.33], // Cmaj9 ethereal open 5th
+      [146.83, 220.0, 329.63, 440.0, 659.25], // Dsus4 add9
+      [110.0, 164.81, 261.63, 329.63, 493.88], // Am9
+      [174.61, 261.63, 349.23, 523.25, 698.46], // Fmaj7
+    ];
+
+    const lofiChords = [
+      [146.83, 220.0, 261.63, 329.63], // Dm7/9
+      [196.0, 246.94, 349.23, 392.0],  // G13
+      [130.81, 196.0, 246.94, 329.63], // Cmaj7/9
+      [220.0, 261.63, 329.63, 415.3],  // Am(maj7)
+    ];
+
+    const dispatchChords = [
+      [110.0, 164.81, 220.0, 277.18],  // Tense A harmonic pulse
+      [98.0, 146.83, 196.0, 246.94],   // G minor suspense
+      [87.31, 130.81, 174.61, 220.0],  // F dramatic
+      [123.47, 185.0, 246.94, 311.13], // B diminished tension
     ];
 
     const stepChord = () => {
       if (!this.ctx || !this.musicGain || !this.isMusicEnabled || this.isMuted) return;
 
-      const currentChord = chords[this.chordIndex % chords.length];
+      let currentPalette = folkChords;
+      let oscType: OscillatorType = 'triangle';
+      let chordInterval = 3800;
+
+      if (this.currentStationId === 'val-aurora') {
+        currentPalette = auroraChords;
+        oscType = 'sine';
+        chordInterval = 4400;
+      } else if (this.currentStationId === 'val-lofi') {
+        currentPalette = lofiChords;
+        oscType = 'triangle';
+        chordInterval = 3400;
+      } else if (this.currentStationId === 'val-dispatch') {
+        currentPalette = dispatchChords;
+        oscType = 'sawtooth';
+        chordInterval = 2800;
+      }
+
+      const currentChord = currentPalette[this.chordIndex % currentPalette.length];
       this.chordIndex++;
       const t = this.ctx.currentTime;
-      const chordDuration = 3.8;
+      const chordDuration = chordInterval / 1000;
 
       currentChord.forEach((freq, i) => {
         const osc = this.ctx!.createOscillator();
         const filter = this.ctx!.createBiquadFilter();
         const gain = this.ctx!.createGain();
 
-        // Subtle warm detuning
-        osc.type = i === 0 ? 'sine' : 'triangle';
-        osc.frequency.setValueAtTime(freq * (1 + (Math.random() - 0.5) * 0.004), t);
+        osc.type = i === 0 ? 'sine' : oscType;
+        osc.frequency.setValueAtTime(freq * (1 + (Math.random() - 0.5) * 0.005), t);
 
         filter.type = 'lowpass';
-        filter.frequency.setValueAtTime(380 + Math.sin(this.chordIndex) * 80, t);
-        filter.frequency.linearRampToValueAtTime(450, t + chordDuration * 0.5);
+        const baseCutoff = this.currentStationId === 'val-dispatch' ? 320 : 420;
+        filter.frequency.setValueAtTime(baseCutoff + Math.sin(this.chordIndex) * 70, t);
+        filter.frequency.linearRampToValueAtTime(baseCutoff + 120, t + chordDuration * 0.5);
 
-        // Slow soft attack and release for cozy ambience
+        // Envelope
         gain.gain.setValueAtTime(0.0001, t);
-        gain.gain.linearRampToValueAtTime(0.038, t + 1.2);
-        gain.gain.setValueAtTime(0.038, t + chordDuration - 1.2);
+        gain.gain.linearRampToValueAtTime(0.035, t + 1.0);
+        gain.gain.setValueAtTime(0.035, t + Math.max(1.1, chordDuration - 1.0));
         gain.gain.exponentialRampToValueAtTime(0.0001, t + chordDuration);
 
         osc.connect(filter);
@@ -400,7 +440,135 @@ class SynthAudioEngine {
 
     // First chord immediately
     stepChord();
-    this.musicIntervalId = window.setInterval(stepChord, 3800);
+    this.musicIntervalId = window.setInterval(stepChord, 3600);
+  }
+
+  public setRadioStation(stationId: string) {
+    this.currentStationId = stationId;
+    this.playRadioTuning();
+    if (this.musicIntervalId !== null) {
+      this.stopAmbientMusic();
+      this.startAmbientMusic();
+    }
+  }
+
+  /**
+   * Radio tuning analog static burst
+   */
+  public playRadioTuning() {
+    if (!this.ctx || !this.sfxGain || !this.isSfxEnabled) return;
+    const t = this.ctx.currentTime;
+
+    // Filtered noise burst
+    const bufferSize = Math.floor(this.ctx.sampleRate * 0.16);
+    const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+    const data = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
+    }
+
+    const noise = this.ctx.createBufferSource();
+    noise.buffer = noiseBuffer;
+
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(1200, t);
+    filter.frequency.exponentialRampToValueAtTime(3200, t + 0.15);
+
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(0.12, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.16);
+
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.sfxGain);
+
+    noise.start(t);
+  }
+
+  /**
+   * Sound when an emergency dispatch is started
+   */
+  public playQuestStart() {
+    if (!this.ctx || !this.sfxGain || !this.isSfxEnabled) return;
+    const t = this.ctx.currentTime;
+    const notes = [329.63, 440.0, 554.37, 659.25]; // E4, A4, C#5, E5
+
+    notes.forEach((freq, idx) => {
+      const noteTime = t + idx * 0.06;
+      const osc = this.ctx!.createOscillator();
+      const gain = this.ctx!.createGain();
+
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, noteTime);
+
+      gain.gain.setValueAtTime(0.16, noteTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, noteTime + 0.28);
+
+      osc.connect(gain);
+      gain.connect(this.sfxGain!);
+
+      osc.start(noteTime);
+      osc.stop(noteTime + 0.3);
+    });
+  }
+
+  /**
+   * Urgent dispatch timer tick warning
+   */
+  public playQuestTick() {
+    if (!this.ctx || !this.sfxGain || !this.isSfxEnabled) return;
+    const t = this.ctx.currentTime;
+
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, t);
+    osc.frequency.exponentialRampToValueAtTime(440, t + 0.05);
+
+    gain.gain.setValueAtTime(0.08, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
+
+    osc.connect(gain);
+    gain.connect(this.sfxGain);
+
+    osc.start(t);
+    osc.stop(t + 0.07);
+  }
+
+  /**
+   * Quest completed successfully fanfare
+   */
+  public playQuestSuccess() {
+    if (!this.ctx || !this.sfxGain || !this.isSfxEnabled) return;
+    const t = this.ctx.currentTime;
+    const melody = [
+      { f: 440.0, d: 0.12 },
+      { f: 554.37, d: 0.12 },
+      { f: 659.25, d: 0.14 },
+      { f: 880.0, d: 0.4 },
+    ];
+
+    let accum = 0;
+    melody.forEach((m) => {
+      const noteTime = t + accum;
+      accum += m.d;
+      const osc = this.ctx!.createOscillator();
+      const gain = this.ctx!.createGain();
+
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(m.f, noteTime);
+
+      gain.gain.setValueAtTime(0.2, noteTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, noteTime + m.d * 1.5);
+
+      osc.connect(gain);
+      gain.connect(this.sfxGain!);
+
+      osc.start(noteTime);
+      osc.stop(noteTime + m.d * 1.6);
+    });
   }
 
   public stopAmbientMusic() {

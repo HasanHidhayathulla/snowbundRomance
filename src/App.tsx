@@ -5,6 +5,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { synthAudio } from './audio/synthAudio';
+import { DispatchRadioModal } from './components/DispatchRadioModal';
 import { GameHUD } from './components/GameHUD';
 import { PauseModal } from './components/PauseModal';
 import { PhotoPostcardModal } from './components/PhotoPostcardModal';
@@ -67,6 +68,12 @@ export default function App() {
     },
     unlockedAchievementIds: [],
     atmosphere: settings.atmosphere || 'twilight',
+    activeSkinId: 'classic-crimson',
+    unlockedSkinIds: ['classic-crimson'],
+    activeDispatchId: 'dispatch-doctor',
+    activeDispatchProgress: 0,
+    completedDispatchIds: [],
+    radioStationId: 'val-classic',
     activeQuest: null,
     questTimeRemainingSec: 0,
     questTargetDistance: 0,
@@ -175,6 +182,36 @@ export default function App() {
     }
   };
 
+  const handleOpenDispatchModal = () => {
+    if (engineRef.current) {
+      engineRef.current.setGameState('DISPATCH');
+    }
+  };
+
+  const handleCycleRadio = () => {
+    if (engineRef.current) {
+      engineRef.current.cycleRadioStation();
+    }
+  };
+
+  const handleSelectDispatch = (dispatchId: string) => {
+    if (engineRef.current) {
+      engineRef.current.setActiveDispatch(dispatchId);
+    }
+  };
+
+  const handleSelectStation = (stationId: string) => {
+    if (engineRef.current) {
+      engineRef.current.setRadioStation(stationId);
+    }
+  };
+
+  const handleApplySkin = (skinId: string) => {
+    if (engineRef.current) {
+      engineRef.current.unlockAndApplySkin(skinId);
+    }
+  };
+
   const handleOpenPhotoMode = () => {
     if (engineRef.current) {
       engineRef.current.setGameState('PHOTO');
@@ -259,6 +296,8 @@ export default function App() {
           onOpenWorkshop={handleOpenWorkshop}
           onOpenScrapbook={handleOpenScrapbook}
           onOpenPhotoMode={handleOpenPhotoMode}
+          onOpenDispatchModal={handleOpenDispatchModal}
+          onCycleRadio={handleCycleRadio}
           onOpenSettings={handleOpenSettings}
           onOpenQuests={handleOpenQuests}
           onPhotoMode={handlePhotoMode}
@@ -283,6 +322,19 @@ export default function App() {
         />
       )}
 
+      {/* 4.5 Solstice Emergency Dispatch & Radio Modal */}
+      {stats.gameState === 'DISPATCH' && (
+        <DispatchRadioModal
+          loveLetters={stats.loveLetters}
+          activeSkinId={stats.activeSkinId}
+          unlockedSkinIds={stats.unlockedSkinIds}
+          activeDispatchId={stats.activeDispatchId}
+          activeDispatchProgress={stats.activeDispatchProgress}
+          completedDispatchIds={stats.completedDispatchIds}
+          radioStationId={stats.radioStationId}
+          onSelectDispatch={handleSelectDispatch}
+          onSelectStation={handleSelectStation}
+          onApplySkin={handleApplySkin}
       {/* 5. Village Dispatch Quests Modal */}
       {stats.gameState === 'QUESTS' && (
         <QuestModal
@@ -295,6 +347,7 @@ export default function App() {
         />
       )}
 
+      {/* 5. Pause Modal */}
       {/* 6. Pause Modal */}
       {stats.gameState === 'PAUSED' && (
         <PauseModal

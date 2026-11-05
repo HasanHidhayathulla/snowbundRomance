@@ -25,6 +25,11 @@ export interface RadarGift {
   revealed: boolean;
 }
 
+export interface RadarDispatch {
+  id: string;
+  x: number;
+  z: number;
+  radius: number;
 export interface RadarQuestWaypoint {
   x: number;
   z: number;
@@ -37,6 +42,7 @@ interface VillageRadarProps {
   heading: number; // yaw in radians
   landmarks: RadarLandmark[];
   gifts: RadarGift[];
+  activeDispatch?: RadarDispatch | null;
   snowClearedPercent: number;
   questWaypoint?: RadarQuestWaypoint | null;
 }
@@ -47,6 +53,7 @@ export const VillageRadar: React.FC<VillageRadarProps> = ({
   heading,
   landmarks,
   gifts,
+  activeDispatch,
   snowClearedPercent,
   questWaypoint,
 }) => {
@@ -121,6 +128,15 @@ export const VillageRadar: React.FC<VillageRadarProps> = ({
 
         {/* SVG Marker Layer with explicit viewBox */}
         <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full">
+          {/* Active Emergency Dispatch Area */}
+          {activeDispatch && (
+            <g transform={`translate(${mapToPercent(activeDispatch.x)}, ${mapToPercent(activeDispatch.z)})`}>
+              <circle r="7" fill="#38bdf8" opacity="0.25" className="animate-ping origin-center" />
+              <circle r="5.5" fill="#0284c7" opacity="0.4" stroke="#38bdf8" strokeWidth="0.8" strokeDasharray="2,2" />
+              <polygon points="0,-4 3,3 -3,3" fill="#38bdf8" />
+            </g>
+          )}
+
           {/* Landmark Pins */}
           {landmarks.map((lm) => {
             const lx = mapToPercent(lm.x);
@@ -203,6 +219,12 @@ export const VillageRadar: React.FC<VillageRadarProps> = ({
           <span className="w-2 h-2 rounded-full bg-amber-400 inline-block" />
           Gift
         </span>
+        {activeDispatch && (
+          <span className="flex items-center gap-1 text-cyan-300">
+            <span className="w-2 h-2 rounded-full bg-cyan-400 inline-block animate-pulse" />
+            Dispatch
+          </span>
+        )}
       </div>
     </div>
   );

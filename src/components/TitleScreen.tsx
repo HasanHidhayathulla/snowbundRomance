@@ -143,7 +143,9 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
         <span className="mx-3 text-slate-600">·</span>
         <span className="font-mono text-slate-200 font-semibold">Space</span> Steam Boost
         <span className="mx-3 text-slate-600">·</span>
-        <span className="font-mono text-slate-200 font-semibold">G</span> Solstice Workshop
+        <span className="font-mono text-slate-200 font-semibold">Q</span> Dispatch Errands
+        <span className="mx-3 text-slate-600">·</span>
+        <span className="font-mono text-slate-200 font-semibold">G</span> Solstice Workshop & Paint
         <span className="mx-3 text-slate-600">·</span>
         <span className="font-mono text-slate-200 font-semibold">Esc</span> Pause
       </div>

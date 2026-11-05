@@ -293,7 +293,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <kbd className="px-2 py-0.5 rounded bg-slate-900 border border-slate-700 text-pink-300 font-mono text-[11px]">P</kbd>
               </div>
               <div className="p-2.5 rounded-xl bg-slate-800/70 border border-slate-700/50 flex items-center justify-between">
-                <span className="text-slate-300">Solstice Workshop</span>
+                <span className="text-slate-300">Village Dispatch Board</span>
+                <kbd className="px-2 py-0.5 rounded bg-slate-900 border border-slate-700 text-amber-300 font-mono text-[11px]">Q</kbd>
+              </div>
+              <div className="p-2.5 rounded-xl bg-slate-800/70 border border-slate-700/50 flex items-center justify-between">
+                <span className="text-slate-300">Solstice Workshop & Paint</span>
                 <kbd className="px-2 py-0.5 rounded bg-slate-900 border border-slate-700 text-rose-300 font-mono text-[11px]">G</kbd>
               </div>
               <div className="p-2.5 rounded-xl bg-slate-800/70 border border-slate-700/50 flex items-center justify-between">

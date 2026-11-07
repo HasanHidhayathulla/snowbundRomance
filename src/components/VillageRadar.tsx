@@ -25,26 +25,14 @@ export interface RadarGift {
   revealed: boolean;
 }
 
-export interface RadarDispatch {
-  id: string;
-  x: number;
-  z: number;
-  radius: number;
-export interface RadarQuestWaypoint {
-  x: number;
-  z: number;
-  title: string;
-}
-
 interface VillageRadarProps {
   playerX: number;
   playerZ: number;
   heading: number; // yaw in radians
   landmarks: RadarLandmark[];
   gifts: RadarGift[];
-  activeDispatch?: RadarDispatch | null;
   snowClearedPercent: number;
-  questWaypoint?: RadarQuestWaypoint | null;
+  activeQuestTarget?: { x: number; z: number; title: string } | null;
 }
 
 export const VillageRadar: React.FC<VillageRadarProps> = ({
@@ -53,9 +41,8 @@ export const VillageRadar: React.FC<VillageRadarProps> = ({
   heading,
   landmarks,
   gifts,
-  activeDispatch,
   snowClearedPercent,
-  questWaypoint,
+  activeQuestTarget,
 }) => {
   const [isMinimized, setIsMinimized] = useState(false);
 
@@ -128,14 +115,18 @@ export const VillageRadar: React.FC<VillageRadarProps> = ({
 
         {/* SVG Marker Layer with explicit viewBox */}
         <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full">
-          {/* Active Emergency Dispatch Area */}
-          {activeDispatch && (
-            <g transform={`translate(${mapToPercent(activeDispatch.x)}, ${mapToPercent(activeDispatch.z)})`}>
-              <circle r="7" fill="#38bdf8" opacity="0.25" className="animate-ping origin-center" />
-              <circle r="5.5" fill="#0284c7" opacity="0.4" stroke="#38bdf8" strokeWidth="0.8" strokeDasharray="2,2" />
-              <polygon points="0,-4 3,3 -3,3" fill="#38bdf8" />
-            </g>
-          )}
+          {/* Active Quest Target Waypoint */}
+          {activeQuestTarget && (() => {
+            const qx = mapToPercent(activeQuestTarget.x);
+            const qz = mapToPercent(activeQuestTarget.z);
+            return (
+              <g key="quest-target" transform={`translate(${qx}, ${qz})`}>
+                <circle r="6" fill="#38bdf8" opacity="0.3" className="animate-ping" />
+                <circle r="3.8" fill="#0284c7" stroke="#ffffff" strokeWidth="1" />
+                <text x="0" y="2.5" textAnchor="middle" fill="#ffffff" fontSize="6" fontWeight="bold">!</text>
+              </g>
+            );
+          })()}
 
           {/* Landmark Pins */}
           {landmarks.map((lm) => {
@@ -158,17 +149,6 @@ export const VillageRadar: React.FC<VillageRadarProps> = ({
               </g>
             );
           })}
-
-          {/* Quest Waypoint Pin (Glowing Pulsing Gold) */}
-          {questWaypoint && (
-            <g transform={`translate(${mapToPercent(questWaypoint.x)}, ${mapToPercent(questWaypoint.z)})`}>
-              <circle r="6" fill="#fbbf24" opacity="0.35">
-                <animate attributeName="r" values="4;8;4" dur="1.6s" repeatCount="indefinite" />
-                <animate attributeName="opacity" values="0.6;0.1;0.6" dur="1.6s" repeatCount="indefinite" />
-              </circle>
-              <polygon points="0,-6 5,4 -5,4" fill="#fbbf24" stroke="#78350f" strokeWidth="0.8" />
-            </g>
-          )}
 
           {/* Collectible Gifts */}
           {gifts.map((g) => {
@@ -204,24 +184,17 @@ export const VillageRadar: React.FC<VillageRadarProps> = ({
           <span className="w-2 h-2 rounded-sm bg-sky-400 inline-block" />
           Landmark
         </span>
-        {questWaypoint ? (
-          <span className="flex items-center gap-1 text-amber-300 font-semibold">
-            <span className="w-2 h-2 rounded-full bg-amber-400 inline-block animate-pulse" />
-            Waypoint
-          </span>
-        ) : (
-          <span className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-rose-500 inline-block" />
-            Reunited
-          </span>
-        )}
+        <span className="flex items-center gap-1">
+          <span className="w-2 h-2 rounded-full bg-rose-500 inline-block" />
+          Reunited
+        </span>
         <span className="flex items-center gap-1">
           <span className="w-2 h-2 rounded-full bg-amber-400 inline-block" />
           Gift
         </span>
-        {activeDispatch && (
-          <span className="flex items-center gap-1 text-cyan-300">
-            <span className="w-2 h-2 rounded-full bg-cyan-400 inline-block animate-pulse" />
+        {activeQuestTarget && (
+          <span className="flex items-center gap-1 text-sky-300">
+            <span className="w-2 h-2 rounded-full bg-sky-400 inline-block" />
             Dispatch
           </span>
         )}

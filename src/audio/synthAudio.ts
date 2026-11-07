@@ -30,7 +30,7 @@ class SynthAudioEngine {
   private snowNoiseFilter: BiquadFilterNode | null = null;
   private noiseBuffer: AudioBuffer | null = null;
 
-  // Music state & Station
+  // Music state & Radio stations
   private musicIntervalId: number | null = null;
   private chordIndex: number = 0;
   private currentStationId: string = 'val-classic';
@@ -299,60 +299,6 @@ class SynthAudioEngine {
   }
 
   /**
-   * Quest accepted jingle (adventurous brassy chime)
-   */
-  public playQuestStart() {
-    if (!this.ctx || !this.sfxGain || !this.isSfxEnabled) return;
-    const t = this.ctx.currentTime;
-    const notes = [329.63, 392.0, 493.88, 659.25]; // E4, G4, B4, E5
-
-    notes.forEach((freq, idx) => {
-      const noteTime = t + idx * 0.07;
-      const osc = this.ctx!.createOscillator();
-      const gain = this.ctx!.createGain();
-
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(freq, noteTime);
-
-      gain.gain.setValueAtTime(0.14, noteTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, noteTime + 0.3);
-
-      osc.connect(gain);
-      gain.connect(this.sfxGain!);
-
-      osc.start(noteTime);
-      osc.stop(noteTime + 0.32);
-    });
-  }
-
-  /**
-   * Quest completed successfully fanfare
-   */
-  public playQuestComplete() {
-    if (!this.ctx || !this.sfxGain || !this.isSfxEnabled) return;
-    const t = this.ctx.currentTime;
-    const notes = [523.25, 659.25, 783.99, 1046.5, 1318.51]; // C5, E5, G5, C6, E6
-
-    notes.forEach((freq, idx) => {
-      const noteTime = t + idx * 0.08;
-      const osc = this.ctx!.createOscillator();
-      const gain = this.ctx!.createGain();
-
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, noteTime);
-
-      gain.gain.setValueAtTime(0.16, noteTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, noteTime + 0.45);
-
-      osc.connect(gain);
-      gain.connect(this.sfxGain!);
-
-      osc.start(noteTime);
-      osc.stop(noteTime + 0.48);
-    });
-  }
-
-  /**
    * Bump against obstacle
    */
   public playBumpSound() {
@@ -404,173 +350,83 @@ class SynthAudioEngine {
   }
 
   /**
-   * Radio tuning static burst
-   */
-  public playRadioTuningSound() {
-    if (!this.ctx || !this.sfxGain || !this.isSfxEnabled) return;
-    const t = this.ctx.currentTime;
-
-    const bufferSize = Math.floor(this.ctx.sampleRate * 0.25);
-    const noiseBuf = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
-    const data = noiseBuf.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) {
-      data[i] = (Math.random() * 2 - 1) * 0.4;
-    }
-
-    const noiseSrc = this.ctx.createBufferSource();
-    noiseSrc.buffer = noiseBuf;
-
-    const filter = this.ctx.createBiquadFilter();
-    filter.type = 'bandpass';
-    filter.frequency.setValueAtTime(1400, t);
-    filter.frequency.exponentialRampToValueAtTime(800, t + 0.2);
-
-    const gain = this.ctx.createGain();
-    gain.gain.setValueAtTime(0.12, t);
-    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
-
-    noiseSrc.connect(filter);
-    filter.connect(gain);
-    gain.connect(this.sfxGain);
-
-    noiseSrc.start(t);
-    noiseSrc.stop(t + 0.25);
-  }
-
-  /**
-   * Dispatch Alert Chime
-   */
-  public playDispatchAlert() {
-    if (!this.ctx || !this.sfxGain || !this.isSfxEnabled) return;
-    const t = this.ctx.currentTime;
-    const beeps = [880, 1174.66, 880];
-
-    beeps.forEach((freq, idx) => {
-      const noteTime = t + idx * 0.12;
-      const osc = this.ctx!.createOscillator();
-      const gain = this.ctx!.createGain();
-
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, noteTime);
-
-      gain.gain.setValueAtTime(0.18, noteTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, noteTime + 0.09);
-
-      osc.connect(gain);
-      gain.connect(this.sfxGain!);
-
-      osc.start(noteTime);
-      osc.stop(noteTime + 0.1);
-    });
-  }
-
-  /**
-   * Dispatch Quest Completion Fanfare
-   */
-  public playDispatchSuccess() {
-    if (!this.ctx || !this.sfxGain || !this.isSfxEnabled) return;
-    const t = this.ctx.currentTime;
-    const notes = [440, 554.37, 659.25, 880, 1108.73];
-
-    notes.forEach((freq, idx) => {
-      const noteTime = t + idx * 0.08;
-      const osc = this.ctx!.createOscillator();
-      const gain = this.ctx!.createGain();
-
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(freq, noteTime);
-
-      gain.gain.setValueAtTime(0.18, noteTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, noteTime + 0.45);
-
-      osc.connect(gain);
-      gain.connect(this.sfxGain!);
-
-      osc.start(noteTime);
-      osc.stop(noteTime + 0.5);
-    });
-  }
-
-  /**
-   * Set active radio station & switch music style
-   */
-  public setRadioStation(stationId: string) {
-    this.currentStationId = stationId;
-    this.playRadioTuningSound();
-    if (this.isMusicEnabled) {
-      this.stopAmbientMusic();
-      this.startAmbientMusic();
-    }
-  }
-
-  public getRadioStation(): string {
-    return this.currentStationId;
-  }
-
-  /**
-   * Ambient romantic winter synth music loop tailored per radio station
+   * Ambient romantic winter synth music loop with multiple radio stations
    */
   private startAmbientMusic() {
     if (this.musicIntervalId !== null) return;
 
-    let chords: number[][];
-    let intervalTime = 3800;
+    // Different musical station voicings
+    const folkChords = [
+      [174.61, 261.63, 329.63, 392.0], // Fmaj9
+      [196.0, 246.94, 293.66, 329.63], // G6
+      [164.81, 246.94, 329.63, 392.0], // Em7
+      [220.0, 261.63, 329.63, 440.0],  // Am7
+    ];
 
-    if (this.currentStationId === 'cozy-lofi') {
-      // Warm neo-soul winter chords: Dm9 -> G13 -> Cmaj9 -> A7b13
-      chords = [
-        [146.83, 220.0, 261.63, 329.63, 349.23], // Dm9
-        [196.0, 246.94, 329.63, 440.0],          // G13
-        [130.81, 196.0, 246.94, 329.63, 392.0], // Cmaj9
-        [220.0, 277.18, 329.63, 415.3],          // A7#5
-      ];
-      intervalTime = 3200;
-    } else if (this.currentStationId === 'aurora-ambient') {
-      // Ethereal floating crystalline textures: Abmaj9 -> Ebmaj9 -> Fm9 -> Dbmaj7#11
-      chords = [
-        [207.65, 311.13, 392.0, 466.16],         // Abmaj9
-        [155.56, 233.08, 311.13, 349.23, 440.0], // Ebmaj9
-        [174.61, 261.63, 311.13, 392.0],         // Fm9
-        [138.59, 207.65, 277.18, 370.0],         // Dbmaj7#11
-      ];
-      intervalTime = 4600;
-    } else {
-      // Standard Valentine Harmonies: Fmaj9 -> G6 -> Em7 -> Am7
-      chords = [
-        [174.61, 261.63, 329.63, 392.0], // F2, C3, E3, G3 (Fmaj9)
-        [196.0, 246.94, 293.66, 329.63], // G2, B2, D3, E3 (G6)
-        [164.81, 246.94, 329.63, 392.0], // E2, B2, E3, G3 (Em7)
-        [220.0, 261.63, 329.63, 440.0],  // A2, C3, E3, A3 (Am7)
-      ];
-      intervalTime = 3800;
-    }
+    const auroraChords = [
+      [130.81, 196.0, 293.66, 392.0, 587.33], // Cmaj9 ethereal open 5th
+      [146.83, 220.0, 329.63, 440.0, 659.25], // Dsus4 add9
+      [110.0, 164.81, 261.63, 329.63, 493.88], // Am9
+      [174.61, 261.63, 349.23, 523.25, 698.46], // Fmaj7
+    ];
+
+    const lofiChords = [
+      [146.83, 220.0, 261.63, 329.63], // Dm7/9
+      [196.0, 246.94, 349.23, 392.0],  // G13
+      [130.81, 196.0, 246.94, 329.63], // Cmaj7/9
+      [220.0, 261.63, 329.63, 415.3],  // Am(maj7)
+    ];
+
+    const dispatchChords = [
+      [110.0, 164.81, 220.0, 277.18],  // Tense A harmonic pulse
+      [98.0, 146.83, 196.0, 246.94],   // G minor suspense
+      [87.31, 130.81, 174.61, 220.0],  // F dramatic
+      [123.47, 185.0, 246.94, 311.13], // B diminished tension
+    ];
 
     const stepChord = () => {
       if (!this.ctx || !this.musicGain || !this.isMusicEnabled || this.isMuted) return;
 
-      const currentChord = chords[this.chordIndex % chords.length];
+      let currentPalette = folkChords;
+      let oscType: OscillatorType = 'triangle';
+      let chordInterval = 3800;
+
+      if (this.currentStationId === 'val-aurora') {
+        currentPalette = auroraChords;
+        oscType = 'sine';
+        chordInterval = 4400;
+      } else if (this.currentStationId === 'val-lofi') {
+        currentPalette = lofiChords;
+        oscType = 'triangle';
+        chordInterval = 3400;
+      } else if (this.currentStationId === 'val-dispatch') {
+        currentPalette = dispatchChords;
+        oscType = 'sawtooth';
+        chordInterval = 2800;
+      }
+
+      const currentChord = currentPalette[this.chordIndex % currentPalette.length];
       this.chordIndex++;
       const t = this.ctx.currentTime;
-      const chordDuration = intervalTime / 1000;
+      const chordDuration = chordInterval / 1000;
 
       currentChord.forEach((freq, i) => {
         const osc = this.ctx!.createOscillator();
         const filter = this.ctx!.createBiquadFilter();
         const gain = this.ctx!.createGain();
 
-        // Subtle warm detuning
-        osc.type = i === 0 ? 'sine' : this.currentStationId === 'cozy-lofi' ? 'triangle' : 'sine';
-        osc.frequency.setValueAtTime(freq * (1 + (Math.random() - 0.5) * 0.003), t);
+        osc.type = i === 0 ? 'sine' : oscType;
+        osc.frequency.setValueAtTime(freq * (1 + (Math.random() - 0.5) * 0.005), t);
 
         filter.type = 'lowpass';
-        const cutoff = this.currentStationId === 'aurora-ambient' ? 600 : 380;
-        filter.frequency.setValueAtTime(cutoff + Math.sin(this.chordIndex) * 80, t);
-        filter.frequency.linearRampToValueAtTime(cutoff + 70, t + chordDuration * 0.5);
+        const baseCutoff = this.currentStationId === 'val-dispatch' ? 320 : 420;
+        filter.frequency.setValueAtTime(baseCutoff + Math.sin(this.chordIndex) * 70, t);
+        filter.frequency.linearRampToValueAtTime(baseCutoff + 120, t + chordDuration * 0.5);
 
-        // Slow soft attack and release for cozy ambience
+        // Envelope
         gain.gain.setValueAtTime(0.0001, t);
-        gain.gain.linearRampToValueAtTime(0.036, t + 1.1);
-        gain.gain.setValueAtTime(0.036, t + chordDuration - 1.1);
+        gain.gain.linearRampToValueAtTime(0.035, t + 1.0);
+        gain.gain.setValueAtTime(0.035, t + Math.max(1.1, chordDuration - 1.0));
         gain.gain.exponentialRampToValueAtTime(0.0001, t + chordDuration);
 
         osc.connect(filter);
@@ -584,7 +440,135 @@ class SynthAudioEngine {
 
     // First chord immediately
     stepChord();
-    this.musicIntervalId = window.setInterval(stepChord, intervalTime);
+    this.musicIntervalId = window.setInterval(stepChord, 3600);
+  }
+
+  public setRadioStation(stationId: string) {
+    this.currentStationId = stationId;
+    this.playRadioTuning();
+    if (this.musicIntervalId !== null) {
+      this.stopAmbientMusic();
+      this.startAmbientMusic();
+    }
+  }
+
+  /**
+   * Radio tuning analog static burst
+   */
+  public playRadioTuning() {
+    if (!this.ctx || !this.sfxGain || !this.isSfxEnabled) return;
+    const t = this.ctx.currentTime;
+
+    // Filtered noise burst
+    const bufferSize = Math.floor(this.ctx.sampleRate * 0.16);
+    const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+    const data = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
+    }
+
+    const noise = this.ctx.createBufferSource();
+    noise.buffer = noiseBuffer;
+
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(1200, t);
+    filter.frequency.exponentialRampToValueAtTime(3200, t + 0.15);
+
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(0.12, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.16);
+
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.sfxGain);
+
+    noise.start(t);
+  }
+
+  /**
+   * Sound when an emergency dispatch is started
+   */
+  public playQuestStart() {
+    if (!this.ctx || !this.sfxGain || !this.isSfxEnabled) return;
+    const t = this.ctx.currentTime;
+    const notes = [329.63, 440.0, 554.37, 659.25]; // E4, A4, C#5, E5
+
+    notes.forEach((freq, idx) => {
+      const noteTime = t + idx * 0.06;
+      const osc = this.ctx!.createOscillator();
+      const gain = this.ctx!.createGain();
+
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, noteTime);
+
+      gain.gain.setValueAtTime(0.16, noteTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, noteTime + 0.28);
+
+      osc.connect(gain);
+      gain.connect(this.sfxGain!);
+
+      osc.start(noteTime);
+      osc.stop(noteTime + 0.3);
+    });
+  }
+
+  /**
+   * Urgent dispatch timer tick warning
+   */
+  public playQuestTick() {
+    if (!this.ctx || !this.sfxGain || !this.isSfxEnabled) return;
+    const t = this.ctx.currentTime;
+
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, t);
+    osc.frequency.exponentialRampToValueAtTime(440, t + 0.05);
+
+    gain.gain.setValueAtTime(0.08, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
+
+    osc.connect(gain);
+    gain.connect(this.sfxGain);
+
+    osc.start(t);
+    osc.stop(t + 0.07);
+  }
+
+  /**
+   * Quest completed successfully fanfare
+   */
+  public playQuestSuccess() {
+    if (!this.ctx || !this.sfxGain || !this.isSfxEnabled) return;
+    const t = this.ctx.currentTime;
+    const melody = [
+      { f: 440.0, d: 0.12 },
+      { f: 554.37, d: 0.12 },
+      { f: 659.25, d: 0.14 },
+      { f: 880.0, d: 0.4 },
+    ];
+
+    let accum = 0;
+    melody.forEach((m) => {
+      const noteTime = t + accum;
+      accum += m.d;
+      const osc = this.ctx!.createOscillator();
+      const gain = this.ctx!.createGain();
+
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(m.f, noteTime);
+
+      gain.gain.setValueAtTime(0.2, noteTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, noteTime + m.d * 1.5);
+
+      osc.connect(gain);
+      gain.connect(this.sfxGain!);
+
+      osc.start(noteTime);
+      osc.stop(noteTime + m.d * 1.6);
+    });
   }
 
   public stopAmbientMusic() {

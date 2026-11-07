@@ -11,11 +11,13 @@ import {
   Camera,
   ChevronDown,
   ChevronUp,
+  Clock,
   Compass,
   Gift,
   Heart,
   Landmark,
   Mail,
+  Music,
   Pause,
   Radio,
   Settings,
@@ -24,11 +26,8 @@ import {
   VolumeX,
   Wrench,
   Zap,
-  Send,
-  Clock,
-  MapPin,
 } from 'lucide-react';
-import { COMBO_LEVELS, RADIO_STATIONS, VILLAGE_DISPATCHES } from '../game/constants';
+import { COMBO_LEVELS } from '../game/constants';
 import type { GameHUDStats } from '../game/engine';
 import { VillageRadar } from './VillageRadar';
 
@@ -37,12 +36,10 @@ interface GameHUDProps {
   onOpenWorkshop: () => void;
   onOpenScrapbook: () => void;
   onOpenPhotoMode: () => void;
-  onOpenDispatchModal: () => void;
-  onCycleRadio: () => void;
+  onOpenDispatchRadio: () => void;
   onOpenSettings: () => void;
-  onOpenQuests: () => void;
-  onPhotoMode: () => void;
   onPause: () => void;
+  onCycleRadio: () => void;
   isMuted: boolean;
   onToggleMute: () => void;
   showRadar: boolean;
@@ -54,12 +51,10 @@ export const GameHUD: React.FC<GameHUDProps> = ({
   onOpenWorkshop,
   onOpenScrapbook,
   onOpenPhotoMode,
-  onOpenDispatchModal,
-  onCycleRadio,
+  onOpenDispatchRadio,
   onOpenSettings,
-  onOpenQuests,
-  onPhotoMode,
   onPause,
+  onCycleRadio,
   isMuted,
   onToggleMute,
   showRadar,
@@ -69,10 +64,6 @@ export const GameHUD: React.FC<GameHUDProps> = ({
 
   // Active combo styling
   const comboInfo = COMBO_LEVELS[stats.comboLevel - 1] || COMBO_LEVELS[0];
-
-  // Active radio station & dispatch
-  const currentStation = RADIO_STATIONS.find((s) => s.id === stats.radioStationId) || RADIO_STATIONS[0];
-  const activeDispatch = VILLAGE_DISPATCHES.find((d) => d.id === stats.activeDispatchId);
 
   return (
     <div className="absolute inset-0 pointer-events-none select-none flex flex-col justify-between p-4 overflow-hidden">
@@ -115,69 +106,27 @@ export const GameHUD: React.FC<GameHUDProps> = ({
                 {stats.giftsFound}/{stats.totalGifts}
               </span>
             </div>
-
-            {/* Quick Radio Frequency Bar */}
-            <button
-              onClick={onCycleRadio}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-900/90 hover:bg-slate-800 border border-slate-800 text-xs text-cyan-300 font-medium transition-colors cursor-pointer"
-              title="Click to cycle Radio Station"
-            >
-              <Radio className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
-              <span className="font-mono text-[11px]">{currentStation.freq}</span>
-            </button>
           </div>
 
-          {/* Active Emergency Dispatch Ticker */}
-          {activeDispatch && !stats.completedDispatchIds.includes(activeDispatch.id) && (
+          {/* Active Dispatch Card (if any) */}
+          {stats.activeQuest && (
             <div
-              onClick={onOpenDispatchModal}
-              className="px-3 py-1.5 rounded-xl bg-slate-900/95 border border-cyan-500/60 shadow-lg text-slate-100 flex items-center justify-between gap-3 max-w-sm cursor-pointer hover:border-cyan-400 transition-colors"
+              onClick={onOpenDispatchRadio}
+              className="px-3 py-2 rounded-xl bg-sky-950/90 border border-sky-500/70 text-sky-200 text-xs flex items-center justify-between gap-3 shadow-lg cursor-pointer hover:border-sky-400 transition-colors"
             >
-              <div className="flex items-center gap-2 overflow-hidden">
-                <AlertCircle className="w-4 h-4 text-cyan-400 flex-shrink-0 animate-bounce" />
-                <div className="truncate text-xs">
-                  <span className="font-semibold text-cyan-300">{activeDispatch.title}</span>
-                  <div className="w-28 h-1 bg-slate-800 rounded-full mt-1 overflow-hidden">
-                    <div
-                      className="h-full bg-cyan-400 rounded-full transition-all duration-200"
-                      style={{ width: `${Math.round(stats.activeDispatchProgress * 100)}%` }}
-                    />
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4 text-sky-400 animate-spin" />
+                <div>
+                  <div className="font-bold text-white truncate max-w-[140px] sm:max-w-xs">
+                    {stats.activeQuest.quest.title}
+                  </div>
+                  <div className="text-[10px] text-sky-300 font-mono">
+                    Target: {stats.activeQuest.distanceToTarget}m
                   </div>
                 </div>
               </div>
-              <span className="text-[10px] font-mono font-bold text-cyan-300 bg-cyan-950/70 border border-cyan-800/60 px-1.5 py-0.5 rounded flex-shrink-0">
-                {Math.round(stats.activeDispatchProgress * 100)}%
-              </span>
-            {/* Quests Quick Shortcut */}
-            <button
-              onClick={onOpenQuests}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-900/90 hover:bg-slate-800 border border-amber-600/50 text-xs text-amber-300 font-medium shadow-sm transition-colors cursor-pointer"
-              title="Village Dispatch Board (Q)"
-            >
-              <Send className="w-3.5 h-3.5 text-amber-400" />
-              <span>Errands</span>
-              <span className="font-mono text-[10px] text-amber-400">[Q]</span>
-            </button>
-          </div>
-
-          {/* Active Quest Tracker Card */}
-          {stats.activeQuest && (
-            <div className="px-3 py-2 rounded-xl bg-slate-900/95 border border-amber-500/70 text-slate-100 shadow-lg flex items-center justify-between gap-3 max-w-xs animate-fade-in">
-              <div className="flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-amber-400 shrink-0" />
-                <div className="flex flex-col">
-                  <span className="text-[10px] uppercase font-bold text-amber-300 tracking-wider">
-                    {stats.activeQuest.title}
-                  </span>
-                  <span className="text-[11px] text-slate-300 font-medium">
-                    {stats.questTargetDistance}m away
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-1 px-2 py-1 rounded bg-slate-950 border border-amber-800/60 font-mono text-xs font-bold text-amber-300">
-                <Clock className="w-3 h-3 text-amber-400" />
-                <span>{stats.questTimeRemainingSec}s</span>
+              <div className="px-2 py-0.5 rounded bg-sky-900/80 font-mono font-bold text-amber-300 text-xs">
+                {Math.ceil(stats.activeQuest.remainingSec)}s
               </div>
             </div>
           )}
@@ -242,6 +191,28 @@ export const GameHUD: React.FC<GameHUDProps> = ({
             <span className="font-mono text-[10px] text-rose-400">[G]</span>
           </button>
 
+          {/* Dispatch & Radio Shortcut */}
+          <button
+            onClick={onOpenDispatchRadio}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-sky-950/80 hover:bg-sky-900/80 border border-sky-700/60 text-xs font-semibold text-sky-200 shadow-md transition-colors cursor-pointer"
+            title="Open Village Dispatch & Solstice Radio (Q)"
+          >
+            <Radio className="w-4 h-4 text-sky-400" />
+            <span className="hidden sm:inline">Radio</span>
+            <span className="font-mono text-[10px] text-sky-400">[Q]</span>
+          </button>
+
+          {/* Quick Radio Cycle Button */}
+          <button
+            onClick={onCycleRadio}
+            className="flex items-center gap-1.5 px-2.5 py-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-800 text-xs font-semibold text-slate-300 shadow-md transition-colors cursor-pointer"
+            title={`Tuned to: ${stats.radioStationName}. Click to cycle station (R)`}
+          >
+            <Music className="w-3.5 h-3.5 text-sky-400" />
+            <span className="hidden xl:inline text-[11px] truncate max-w-[100px]">{stats.radioStationName.split(' ')[0]}</span>
+            <span className="font-mono text-[10px] text-slate-400">[R]</span>
+          </button>
+
           {/* Postcard Photo Mode */}
           <button
             onClick={onOpenPhotoMode}
@@ -261,28 +232,6 @@ export const GameHUD: React.FC<GameHUDProps> = ({
           >
             <BookOpen className="w-4 h-4 text-rose-400" />
             <span className="hidden md:inline">Log</span>
-          </button>
-
-          {/* Emergency Dispatches & Radio Modal */}
-          <button
-            onClick={onOpenDispatchModal}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-cyan-950/80 hover:bg-cyan-900/80 border border-cyan-700/60 text-xs font-semibold text-cyan-200 shadow-md transition-colors cursor-pointer"
-            title="Emergency Dispatches & Radio (R)"
-          >
-            <Radio className="w-4 h-4 text-cyan-400" />
-            <span className="hidden sm:inline">Dispatches</span>
-            <span className="font-mono text-[10px] text-cyan-300">[R]</span>
-          </button>
-
-          {/* Postcard Photo Studio */}
-          <button
-            onClick={onPhotoMode}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-800 text-xs font-semibold text-purple-300 shadow-md transition-colors cursor-pointer"
-            title="Solstice Postcard Photo Mode (P)"
-          >
-            <Camera className="w-4 h-4 text-purple-400" />
-            <span className="hidden lg:inline">Photo</span>
-            <span className="font-mono text-[10px] text-purple-400">[P]</span>
           </button>
 
           {/* Audio Preferences */}
@@ -343,23 +292,13 @@ export const GameHUD: React.FC<GameHUDProps> = ({
               collected: g.collected,
               revealed: !!g.revealed,
             }))}
-            activeDispatch={
-              activeDispatch && !stats.completedDispatchIds.includes(activeDispatch.id)
-                ? {
-                    id: activeDispatch.id,
-                    x: activeDispatch.x,
-                    z: activeDispatch.z,
-                    radius: activeDispatch.radius,
-                  }
-                : null
-            }
             snowClearedPercent={stats.snowClearedPercent}
-            questWaypoint={
+            activeQuestTarget={
               stats.activeQuest
                 ? {
-                    x: stats.activeQuest.targetX,
-                    z: stats.activeQuest.targetZ,
-                    title: stats.activeQuest.title,
+                    x: stats.activeQuest.quest.targetX,
+                    z: stats.activeQuest.quest.targetZ,
+                    title: stats.activeQuest.quest.title,
                   }
                 : null
             }
@@ -480,11 +419,13 @@ export const GameHUD: React.FC<GameHUDProps> = ({
               <span>·</span>
               <span>Space Boost</span>
               <span>·</span>
-              <span>P Photo</span>
-              <span>·</span>
-              <span>G Garage</span>
+              <span>Q Dispatch</span>
               <span>·</span>
               <span>R Radio</span>
+              <span>·</span>
+              <span>P Photo</span>
+              <span>·</span>
+              <span>G Atelier</span>
               <span>·</span>
               <span>L Album</span>
             </div>

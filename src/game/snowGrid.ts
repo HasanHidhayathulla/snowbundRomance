@@ -263,6 +263,47 @@ export class SnowGridSystem {
     return total > 0 ? cleared / total : 0;
   }
 
+  /**
+   * Slowly replenish snow drifts during heavy blizzard events
+   * @param dt delta time in seconds
+   * @param rate accumulation factor (0 to 1)
+   */
+  public accumulateSnowDrifts(dt: number, rate: number) {
+    if (rate <= 0) return;
+    const texSize = this.canvas.width;
+
+    // Softly spray opaque white dust back onto the canvas alpha mask
+    const sprayAlpha = Math.min(0.12, rate * dt * 0.4);
+    this.ctx.save();
+    this.ctx.globalCompositeOperation = 'source-over';
+    this.ctx.fillStyle = `rgba(255, 255, 255, ${sprayAlpha})`;
+
+    // Random scattered flakes on canvas
+    const patches = Math.floor(4 * (rate / 0.08));
+    for (let i = 0; i < patches; i++) {
+      const rx = Math.random() * texSize;
+      const ry = Math.random() * texSize;
+      const rRad = 20 + Math.random() * 45;
+      this.ctx.beginPath();
+      this.ctx.arc(rx, ry, rRad, 0, Math.PI * 2);
+      this.ctx.fill();
+    }
+    this.ctx.restore();
+    this.snowTexture.needsUpdate = true;
+
+    // Replenish a few depth grid cells
+    const cellUpdates = Math.floor(15 * (rate / 0.08));
+    for (let i = 0; i < cellUpdates; i++) {
+      const rIdx = Math.floor(Math.random() * this.totalCells);
+      if (this.depthGrid[rIdx] < 0.8) {
+        if (this.depthGrid[rIdx] === 0 && this.clearedCells > 0) {
+          this.clearedCells--;
+        }
+        this.depthGrid[rIdx] = Math.min(1.0, this.depthGrid[rIdx] + 0.25);
+      }
+    }
+  }
+
   public dispose() {
     this.snowTexture.dispose();
   }

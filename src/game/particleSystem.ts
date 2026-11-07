@@ -246,9 +246,9 @@ export class ParticleSystem {
   }
 
   /**
-   * Update particle positions per frame
+   * Update particle positions per frame with weather modifiers
    */
-  public update(dt: number, cameraPos: THREE.Vector3) {
+  public update(dt: number, cameraPos: THREE.Vector3, windSpeed: number = 0.8, particleSpeedMult: number = 1.0) {
     const posAttr = this.pointsMesh.geometry.getAttribute('position') as THREE.BufferAttribute;
     const colAttr = this.pointsMesh.geometry.getAttribute('color') as THREE.BufferAttribute;
 
@@ -291,9 +291,9 @@ export class ParticleSystem {
     // 2. Update ambient snow centered around camera
     const snowAttr = this.snowMesh.geometry.getAttribute('position') as THREE.BufferAttribute;
     for (let i = 0; i < this.maxSnowflakes; i++) {
-      let sx = this.snowPositions[i * 3 + 0] + this.snowVelocities[i * 3 + 0] * dt;
-      let sy = this.snowPositions[i * 3 + 1] + this.snowVelocities[i * 3 + 1] * dt;
-      let sz = this.snowPositions[i * 3 + 2] + this.snowVelocities[i * 3 + 2] * dt;
+      let sx = this.snowPositions[i * 3 + 0] + (this.snowVelocities[i * 3 + 0] + windSpeed) * dt;
+      let sy = this.snowPositions[i * 3 + 1] + (this.snowVelocities[i * 3 + 1] * particleSpeedMult) * dt;
+      let sz = this.snowPositions[i * 3 + 2] + (this.snowVelocities[i * 3 + 2] + windSpeed * 0.3) * dt;
 
       // Wrap snow within camera volume
       if (sy < 0.2) {

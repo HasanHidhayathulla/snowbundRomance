@@ -5,7 +5,7 @@
  */
 
 import React from 'react';
-import { BookOpen, Heart, Radio, Settings, Sparkles, Volume2, VolumeX } from 'lucide-react';
+import { Award, BookOpen, Heart, Radio, Settings, Sparkles, Volume2, VolumeX } from 'lucide-react';
 import { synthAudio } from '../audio/synthAudio';
 
 interface TitleScreenProps {
@@ -13,6 +13,7 @@ interface TitleScreenProps {
   isMuted: boolean;
   onToggleMute: () => void;
   onOpenDispatchRadio?: () => void;
+  onOpenWinterPass?: () => void;
   onOpenScrapbook: () => void;
   onOpenSettings: () => void;
 }
@@ -22,6 +23,7 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
   isMuted,
   onToggleMute,
   onOpenDispatchRadio,
+  onOpenWinterPass,
   onOpenScrapbook,
   onOpenSettings,
 }) => {
@@ -42,6 +44,16 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
             >
               <Radio className="w-3.5 h-3.5 text-sky-400" />
               <span>Radio</span>
+            </button>
+          )}
+
+          {onOpenWinterPass && (
+            <button
+              onClick={onOpenWinterPass}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-slate-900/80 border border-slate-700/60 hover:bg-slate-800 text-xs text-amber-300 transition-colors cursor-pointer"
+            >
+              <Award className="w-3.5 h-3.5 text-amber-400" />
+              <span>Pass</span>
             </button>
           )}
 
@@ -158,6 +170,8 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
         <span className="font-mono text-slate-200 font-semibold">Q</span> Dispatch
         <span className="mx-2 text-slate-600">·</span>
         <span className="font-mono text-slate-200 font-semibold">R</span> Radio
+        <span className="mx-2 text-slate-600">·</span>
+        <span className="font-mono text-slate-200 font-semibold">B</span> Pass
         <span className="mx-2 text-slate-600">·</span>
         <span className="font-mono text-slate-200 font-semibold">G</span> Atelier
         <span className="mx-2 text-slate-600">·</span>

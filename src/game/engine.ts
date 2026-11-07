@@ -17,6 +17,8 @@ import {
   TRACTOR_DECALS,
   TRACTOR_PAINTS,
   UPGRADES,
+  WEATHER_CONDITIONS,
+  WINTER_PASS_TIERS,
   WORLD_SIZE,
   type GameState,
   type Landmark,
@@ -25,6 +27,9 @@ import {
   type SolsticeQuest,
   type TractorDecal,
   type TractorPaint,
+  type WeatherCondition,
+  type WeatherType,
+  type WinterPassTier,
 } from './constants';
 import {
   loadGameProgress,
@@ -85,6 +90,12 @@ export interface GameHUDStats {
   unlockedPaintIds: string[];
   selectedDecalId: string;
   unlockedDecalIds: string[];
+  weather: WeatherCondition;
+  weatherCycleTimeLeft: number;
+  winterPassXp: number;
+  winterPassLevel: number;
+  claimedPassTierIds: number[];
+  unclaimedPassRewardsCount: number;
 }
 
 import {
@@ -164,6 +175,13 @@ export class SnowPlowGameEngine {
   private unlockedDecalIds: string[] = ['heart'];
   private questBeaconGroup!: THREE.Group;
 
+  // Weather & Winter Pass State
+  private currentWeatherType: WeatherType = 'gentle_flurry';
+  private weatherCycleTimer: number = 75;
+  private winterPassXp: number = 0;
+  private claimedPassTierIds: number[] = [];
+  private blizzardContinuousTimer: number = 0;
+
   // World Elements
   private landmarks: Landmark[] = [];
   private landmarkMeshes: Map<string, THREE.Group> = new Map();
@@ -205,6 +223,8 @@ export class SnowPlowGameEngine {
     this.selectedPaintId = saved.selectedPaintId || 'crimson';
     this.unlockedDecalIds = saved.unlockedDecalIds || ['heart'];
     this.selectedDecalId = saved.selectedDecalId || 'heart';
+    this.winterPassXp = saved.winterPassXp || 0;
+    this.claimedPassTierIds = saved.claimedPassTierIds || [];
 
     this.initWebGL();
     this.initScene();
@@ -550,6 +570,13 @@ export class SnowPlowGameEngine {
           this.cycleRadioStation();
         }
       }
+      if (e.code === 'KeyB') {
+        if (this.gameState === 'PLAYING') {
+          this.setGameState('WINTER_PASS');
+        } else if (this.gameState === 'WINTER_PASS') {
+          this.setGameState('PLAYING');
+        }
+      }
     });
 
     window.addEventListener('keyup', (e) => {
@@ -666,6 +693,7 @@ export class SnowPlowGameEngine {
 
     this.unlockedAchievementIds.push(id);
     this.loveLetters += ach.rewardLetters;
+    this.addWinterPassXp(ach.rewardLetters * 2);
     saveGameProgress({
       unlockedAchievementIds: [...this.unlockedAchievementIds],
       loveLetters: this.loveLetters,
@@ -708,6 +736,7 @@ export class SnowPlowGameEngine {
       }
 
       synthAudio.playUpgradeSound();
+      this.addWinterPassXp(35 * (currentLevel + 1));
       this.triggerMessage(`Upgraded ${config.name} to Tier ${currentLevel + 1}: ${nextTier.title}!`);
 
       // Visual upgrade adjustments (e.g. widen blade mesh)
@@ -816,6 +845,79 @@ export class SnowPlowGameEngine {
     return true;
   }
 
+  public addWinterPassXp(amount: number) {
+    if (amount <= 0) return;
+    const oldXp = this.winterPassXp;
+    this.winterPassXp += amount;
+
+    // Check if new tiers unlocked
+    WINTER_PASS_TIERS.forEach((tier) => {
+      if (oldXp < tier.requiredXp && this.winterPassXp >= tier.requiredXp) {
+        this.triggerMessage(`🌟 Winter Pass Milestone! Tier ${tier.level} (${tier.title}) reached!`);
+        synthAudio.playComboChime(tier.level);
+      }
+    });
+
+    if (this.winterPassXp >= 2000) {
+      this.checkAchievement('winter_pass_master');
+    }
+
+    this.saveProgressState();
+    this.pushHUDUpdate();
+  }
+
+  public claimPassTierReward(tierLevel: number): boolean {
+    const tier = WINTER_PASS_TIERS.find((t) => t.level === tierLevel);
+    if (!tier) return false;
+    if (this.winterPassXp < tier.requiredXp) return false;
+    if (this.claimedPassTierIds.includes(tierLevel)) return false;
+
+    this.claimedPassTierIds.push(tierLevel);
+
+    if (tier.rewardLetters) {
+      this.loveLetters += tier.rewardLetters;
+    }
+    if (tier.rewardPaintId && !this.unlockedPaintIds.includes(tier.rewardPaintId)) {
+      this.unlockedPaintIds.push(tier.rewardPaintId);
+    }
+    if (tier.rewardDecalId && !this.unlockedDecalIds.includes(tier.rewardDecalId)) {
+      this.unlockedDecalIds.push(tier.rewardDecalId);
+    }
+
+    synthAudio.playPassClaimSound();
+    this.particles.emitRomanticHearts(this.posX, 2.0, this.posZ, 25);
+    this.triggerMessage(`🎁 Winter Pass Reward Claimed! ${tier.title}: ${tier.rewardDescription}`);
+
+    this.checkAchievement('winter_pass_initiate');
+    this.saveProgressState();
+    this.pushHUDUpdate();
+    return true;
+  }
+
+  public setWeather(weatherId: WeatherType) {
+    this.currentWeatherType = weatherId;
+    const cond = WEATHER_CONDITIONS[weatherId];
+    if (cond) {
+      if (this.scene && this.scene.fog instanceof THREE.FogExp2) {
+        this.scene.fog.density = cond.fogDensity;
+      }
+      if (weatherId === 'heavy_blizzard') {
+        synthAudio.playBlizzardWarningSound();
+        this.triggerMessage(`⚠️ Solstice Blizzard Warning! Visibility dropping & snow drifting!`);
+      } else {
+        this.triggerMessage(`🌤️ Forecast updated: ${cond.name} · ${cond.tagline}`);
+      }
+    }
+    this.pushHUDUpdate();
+  }
+
+  public cycleWeather() {
+    const keys: WeatherType[] = ['gentle_flurry', 'heavy_blizzard', 'clear_aurora', 'starlight_freeze'];
+    const idx = keys.indexOf(this.currentWeatherType);
+    const next = keys[(idx + 1) % keys.length];
+    this.setWeather(next);
+  }
+
   private saveProgressState() {
     saveGameProgress({
       loveLetters: this.loveLetters,
@@ -827,6 +929,8 @@ export class SnowPlowGameEngine {
       selectedPaintId: this.selectedPaintId,
       unlockedDecalIds: [...this.unlockedDecalIds],
       selectedDecalId: this.selectedDecalId,
+      winterPassXp: this.winterPassXp,
+      claimedPassTierIds: [...this.claimedPassTierIds],
     });
   }
 
@@ -857,7 +961,9 @@ export class SnowPlowGameEngine {
       }
 
       this.updateCamera(dt);
-      this.particles.update(dt, this.camera.position);
+      const cond = WEATHER_CONDITIONS[this.currentWeatherType];
+      this.particles.update(dt, this.camera.position, cond.windSpeed, cond.snowParticleMultiplier);
+      synthAudio.updateWeatherAudio(this.currentWeatherType === 'heavy_blizzard' ? 1.0 : 0.0);
 
       this.renderer.render(this.scene, this.camera);
 
@@ -960,10 +1066,34 @@ export class SnowPlowGameEngine {
       this.boostFuel = Math.min(100, this.boostFuel + 14 * dt);
     }
 
-    // 2. Tractor Kinematics Simulation
+    // 2. Weather Cycle & Physics Modifiers
+    this.weatherCycleTimer -= dt;
+    if (this.weatherCycleTimer <= 0) {
+      this.weatherCycleTimer = 65 + Math.random() * 40;
+      this.cycleWeather();
+    }
+
+    const cond = WEATHER_CONDITIONS[this.currentWeatherType];
+
+    // Snow Accumulation during blizzard
+    if (cond.snowAccumulationRate > 0) {
+      this.snowGrid.accumulateSnowDrifts(dt, cond.snowAccumulationRate);
+    }
+
+    if (this.currentWeatherType === 'heavy_blizzard' && Math.abs(this.speed) > 2) {
+      this.blizzardContinuousTimer += dt;
+      if (this.blizzardContinuousTimer >= 15) {
+        this.checkAchievement('blizzard_survivor');
+      }
+    } else {
+      this.blizzardContinuousTimer = 0;
+    }
+
+    // 2.5 Tractor Kinematics Simulation
+    const frictionMult = cond.frictionMultiplier;
     const maxSpeed = (throttle >= 0 ? 12 : 6) * (this.isBoosting ? boostMultiplier : 1.0);
-    const accelRate = (this.isBoosting ? 16 : 10);
-    const frictionRate = 6;
+    const accelRate = (this.isBoosting ? 16 : 10) * (throttle < 0 ? 1 : Math.max(0.8, frictionMult));
+    const frictionRate = 6 * frictionMult;
 
     if (throttle !== 0) {
       this.speed += throttle * accelRate * dt;
@@ -1058,6 +1188,11 @@ export class SnowPlowGameEngine {
       this.snowClearedAccumulator += plowing.cellsClearedThisFrame;
       this.particles.emitSnowSpray(bladeWorldX, 0.1, bladeWorldZ, this.heading, Math.abs(this.speed));
 
+      // Award Winter Pass XP for plowing
+      if (plowing.cellsClearedThisFrame > 0) {
+        this.addWinterPassXp(Math.max(1, Math.round(plowing.cellsClearedThisFrame * 0.15)));
+      }
+
       if (this.snowClearedPercent > 0) {
         this.checkAchievement('first_tracks');
       }
@@ -1084,6 +1219,7 @@ export class SnowPlowGameEngine {
           const currentCombo = COMBO_LEVELS[this.comboLevel - 1];
           const lettersGained = Math.round(5 * currentCombo.multiplier);
           this.loveLetters += lettersGained;
+          this.addWinterPassXp(Math.round(15 * currentCombo.multiplier));
           saveGameProgress({ loveLetters: this.loveLetters });
           this.triggerMessage(`${currentCombo.title}! Combo x${currentCombo.multiplier.toFixed(1)} (+${lettersGained} Letters)`);
         }
@@ -1183,6 +1319,7 @@ export class SnowPlowGameEngine {
           gift.collected = true;
           giftMesh.visible = false;
           this.loveLetters += gift.value;
+          this.addWinterPassXp(gift.value * 2);
 
           const collectedCount = this.gifts.filter((g) => g.collected).length;
           if (collectedCount >= 3) {
@@ -1222,6 +1359,7 @@ export class SnowPlowGameEngine {
 
           const randomQuote = landmark.coupleCoupleQuotes[Math.floor(Math.random() * landmark.coupleCoupleQuotes.length)];
           this.loveLetters += 50;
+          this.addWinterPassXp(120);
           this.checkAchievement('first_reunion');
           this.saveProgressState();
           this.triggerMessage(`${landmark.name} Cleared! Couple reunited: ${randomQuote}`);
@@ -1290,6 +1428,7 @@ export class SnowPlowGameEngine {
       this.completedQuestIds.push(q.id);
     }
     this.loveLetters += q.rewardLetters;
+    this.addWinterPassXp(q.rewardLetters * 3);
     this.checkAchievement('first_dispatch');
 
     synthAudio.playQuestSuccess();
@@ -1312,6 +1451,13 @@ export class SnowPlowGameEngine {
 
     const clearedLandmarks = this.landmarks.filter((l) => l.cleared).length;
     const collectedGifts = this.gifts.filter((g) => g.collected).length;
+
+    const weatherCond = WEATHER_CONDITIONS[this.currentWeatherType] || WEATHER_CONDITIONS.gentle_flurry;
+    const currentPassTier = WINTER_PASS_TIERS.filter((t) => this.winterPassXp >= t.requiredXp).pop();
+    const currentLevel = currentPassTier ? currentPassTier.level : 0;
+    const unclaimedCount = WINTER_PASS_TIERS.filter(
+      (t) => this.winterPassXp >= t.requiredXp && !this.claimedPassTierIds.includes(t.level)
+    ).length;
 
     const station = RADIO_STATIONS.find((s) => s.id === this.radioStationId) || RADIO_STATIONS[0];
 
@@ -1346,6 +1492,12 @@ export class SnowPlowGameEngine {
       unlockedPaintIds: [...this.unlockedPaintIds],
       selectedDecalId: this.selectedDecalId,
       unlockedDecalIds: [...this.unlockedDecalIds],
+      weather: weatherCond,
+      weatherCycleTimeLeft: Math.max(0, Math.round(this.weatherCycleTimer)),
+      winterPassXp: this.winterPassXp,
+      winterPassLevel: currentLevel,
+      claimedPassTierIds: [...this.claimedPassTierIds],
+      unclaimedPassRewardsCount: unclaimedCount,
     });
   }
 
@@ -1354,6 +1506,13 @@ export class SnowPlowGameEngine {
     const comboTier = UPGRADES.comboTimer.tiers[this.upgrades.comboTimer - 1];
     const comboWindow = comboTier.statValue;
     const station = RADIO_STATIONS.find((s) => s.id === this.radioStationId) || RADIO_STATIONS[0];
+    const weatherCond = WEATHER_CONDITIONS[this.currentWeatherType] || WEATHER_CONDITIONS.gentle_flurry;
+    const currentPassTier = WINTER_PASS_TIERS.filter((t) => this.winterPassXp >= t.requiredXp).pop();
+    const currentLevel = currentPassTier ? currentPassTier.level : 0;
+    const unclaimedCount = WINTER_PASS_TIERS.filter(
+      (t) => this.winterPassXp >= t.requiredXp && !this.claimedPassTierIds.includes(t.level)
+    ).length;
+
     return {
       gameState: this.gameState,
       snowClearedPercent: this.snowClearedPercent,
@@ -1385,6 +1544,12 @@ export class SnowPlowGameEngine {
       unlockedPaintIds: [...this.unlockedPaintIds],
       selectedDecalId: this.selectedDecalId,
       unlockedDecalIds: [...this.unlockedDecalIds],
+      weather: weatherCond,
+      weatherCycleTimeLeft: Math.max(0, Math.round(this.weatherCycleTimer)),
+      winterPassXp: this.winterPassXp,
+      winterPassLevel: currentLevel,
+      claimedPassTierIds: [...this.claimedPassTierIds],
+      unclaimedPassRewardsCount: unclaimedCount,
     };
   }
 

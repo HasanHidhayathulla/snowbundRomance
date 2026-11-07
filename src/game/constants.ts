@@ -2,7 +2,179 @@
  * Game constants, upgrade definitions, collectibles, and balance parameters
  */
 
-export type GameState = 'TITLE' | 'PLAYING' | 'PAUSED' | 'GARAGE' | 'VICTORY' | 'SCRAPBOOK' | 'SETTINGS' | 'PHOTO' | 'DISPATCH_RADIO';
+export type GameState = 'TITLE' | 'PLAYING' | 'PAUSED' | 'GARAGE' | 'VICTORY' | 'SCRAPBOOK' | 'SETTINGS' | 'PHOTO' | 'DISPATCH_RADIO' | 'WINTER_PASS';
+
+export type WeatherType = 'gentle_flurry' | 'heavy_blizzard' | 'clear_aurora' | 'starlight_freeze';
+
+export interface WeatherCondition {
+  id: WeatherType;
+  name: string;
+  tagline: string;
+  iconName: string;
+  fogDensity: number;
+  snowParticleMultiplier: number;
+  windSpeed: number; // m/s sideways drift
+  snowAccumulationRate: number; // cells or depth added over time
+  frictionMultiplier: number; // road slickness
+  accentColor: string;
+}
+
+export const WEATHER_CONDITIONS: Record<WeatherType, WeatherCondition> = {
+  gentle_flurry: {
+    id: 'gentle_flurry',
+    name: 'Gentle Flurry',
+    tagline: 'Light romantic snow flurries with pleasant winter road grip.',
+    iconName: 'CloudSnow',
+    fogDensity: 0.016,
+    snowParticleMultiplier: 1.0,
+    windSpeed: 0.8,
+    snowAccumulationRate: 0.0,
+    frictionMultiplier: 1.0,
+    accentColor: '#38bdf8',
+  },
+  heavy_blizzard: {
+    id: 'heavy_blizzard',
+    name: 'Solstice Blizzard',
+    tagline: 'Gale-force gusts and whiteout drifts! Snow steadily replenishes the roads.',
+    iconName: 'Wind',
+    fogDensity: 0.032,
+    snowParticleMultiplier: 2.2,
+    windSpeed: 3.5,
+    snowAccumulationRate: 0.08, // steady drift accumulation
+    frictionMultiplier: 0.75, // slicker road handling
+    accentColor: '#f43f5e',
+  },
+  clear_aurora: {
+    id: 'clear_aurora',
+    name: 'Dancing Aurora',
+    tagline: 'Crystal clear emerald skies with crisp traction and brilliant visibility.',
+    iconName: 'Sparkles',
+    fogDensity: 0.011,
+    snowParticleMultiplier: 0.5,
+    windSpeed: 0.4,
+    snowAccumulationRate: 0.0,
+    frictionMultiplier: 1.15,
+    accentColor: '#34d399',
+  },
+  starlight_freeze: {
+    id: 'starlight_freeze',
+    name: 'Starlight Freeze',
+    tagline: 'Sub-zero crystalline calm with glistening ice crusting the cobblestones.',
+    iconName: 'Moon',
+    fogDensity: 0.014,
+    snowParticleMultiplier: 0.7,
+    windSpeed: 0.2,
+    snowAccumulationRate: 0.0,
+    frictionMultiplier: 0.9,
+    accentColor: '#c084fc',
+  },
+};
+
+export interface WinterPassTier {
+  level: number;
+  requiredXp: number;
+  title: string;
+  rewardType: 'letters' | 'paint' | 'decal' | 'title';
+  rewardLetters?: number;
+  rewardPaintId?: string;
+  rewardDecalId?: string;
+  rewardDescription: string;
+  iconName: string;
+}
+
+export const WINTER_PASS_TIERS: WinterPassTier[] = [
+  {
+    level: 1,
+    requiredXp: 50,
+    title: 'Solstice Novice',
+    rewardType: 'letters',
+    rewardLetters: 30,
+    rewardDescription: '+30 Love Letters stipend',
+    iconName: 'Mail',
+  },
+  {
+    level: 2,
+    requiredXp: 120,
+    title: 'Snowdrifter Scout',
+    rewardType: 'decal',
+    rewardDecalId: 'snowflake',
+    rewardDescription: 'Solstice Snowflake Emblem',
+    iconName: 'Snowflake',
+  },
+  {
+    level: 3,
+    requiredXp: 220,
+    title: 'Frost Vanguard',
+    rewardType: 'letters',
+    rewardLetters: 45,
+    rewardDescription: '+45 Love Letters supply drop',
+    iconName: 'Gift',
+  },
+  {
+    level: 4,
+    requiredXp: 350,
+    title: 'Warm Hearth Tender',
+    rewardType: 'paint',
+    rewardPaintId: 'aurora-emerald',
+    rewardDescription: 'Aurora Borealis Livery Paint',
+    iconName: 'Sparkles',
+  },
+  {
+    level: 5,
+    requiredXp: 520,
+    title: 'Blizzard Breaker',
+    rewardType: 'letters',
+    rewardLetters: 60,
+    rewardDescription: '+60 Love Letters & Hearth Cocoa',
+    iconName: 'Flame',
+  },
+  {
+    level: 6,
+    requiredXp: 720,
+    title: 'Valentine Envoy',
+    rewardType: 'decal',
+    rewardDecalId: 'flame',
+    rewardDescription: 'Eternal Hearth Crest Decal',
+    iconName: 'Flame',
+  },
+  {
+    level: 7,
+    requiredXp: 960,
+    title: 'Glacial Ranger',
+    rewardType: 'letters',
+    rewardLetters: 80,
+    rewardDescription: '+80 Love Letters festive bonus',
+    iconName: 'Mail',
+  },
+  {
+    level: 8,
+    requiredXp: 1250,
+    title: 'Starlight Sovereign',
+    rewardType: 'paint',
+    rewardPaintId: 'midnight-navy',
+    rewardDescription: 'Solstice Midnight Livery Paint',
+    iconName: 'Moon',
+  },
+  {
+    level: 9,
+    requiredXp: 1600,
+    title: 'Valley Guardian',
+    rewardType: 'decal',
+    rewardDecalId: 'sparkles',
+    rewardDescription: 'Starlight Garland Decal',
+    iconName: 'Sparkles',
+  },
+  {
+    level: 10,
+    requiredXp: 2000,
+    title: 'True Love Solstice Master',
+    rewardType: 'paint',
+    rewardPaintId: 'rose-gold',
+    rewardDescription: 'Exclusive Candlelight Rose Gold Livery + 150 Letters',
+    rewardLetters: 150,
+    iconName: 'Crown',
+  },
+];
 
 export interface SolsticeQuest {
   id: string;
@@ -411,6 +583,27 @@ export const ACHIEVEMENTS: SolsticeAchievement[] = [
     description: 'Customize your Heartplow tractor with a new livery paint job.',
     icon: 'Flame',
     rewardLetters: 30,
+  },
+  {
+    id: 'blizzard_survivor',
+    title: 'Whiteout Survivor',
+    description: 'Plow roads continuously through a raging Solstice Blizzard event.',
+    icon: 'Wind',
+    rewardLetters: 45,
+  },
+  {
+    id: 'winter_pass_initiate',
+    title: 'Pass Challenger',
+    description: 'Unlock and claim your first Solstice Winter Pass milestone tier.',
+    icon: 'Award',
+    rewardLetters: 35,
+  },
+  {
+    id: 'winter_pass_master',
+    title: 'Grand Solstice Champion',
+    description: 'Reach the pinnacle Tier 10 in the Solstice Winter Pass.',
+    icon: 'Crown',
+    rewardLetters: 150,
   },
 ];
 

@@ -41,6 +41,7 @@ export interface PersistentProgress {
   unlockedDecalIds: string[];
   selectedDecalId: string;
   savedPostcards?: SavedPostcard[];
+  weatherEventsWitnessed?: number;
 }
 
 const SETTINGS_KEY = 'snowbound_hearts_settings_v1';

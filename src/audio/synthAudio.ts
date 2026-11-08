@@ -30,6 +30,14 @@ class SynthAudioEngine {
   private snowNoiseFilter: BiquadFilterNode | null = null;
   private noiseBuffer: AudioBuffer | null = null;
 
+  // Dynamic atmospheric weather sound nodes (wind & blizzard howl)
+  private windNoiseNode: AudioBufferSourceNode | null = null;
+  private windNoiseFilter: BiquadFilterNode | null = null;
+  private windGain: GainNode | null = null;
+  private windWhistleOsc: OscillatorNode | null = null;
+  private windWhistleGain: GainNode | null = null;
+  private currentWeatherType: string = 'flurry';
+
   // Music state & Radio stations
   private musicIntervalId: number | null = null;
   private chordIndex: number = 0;
@@ -65,6 +73,9 @@ class SynthAudioEngine {
 
       // Setup continuous snow plowing crunch
       this.setupSnowNoise();
+
+      // Setup dynamic atmospheric weather winds
+      this.setupWeatherAudio();
 
       // Start ambient romantic synth pads
       if (this.isMusicEnabled) {
@@ -137,6 +148,115 @@ class SynthAudioEngine {
     this.snowNoiseGain.connect(this.sfxGain);
 
     this.snowNoiseNode.start();
+  }
+
+  private setupWeatherAudio() {
+    if (!this.ctx || !this.sfxGain) return;
+
+    // Pink/low-filtered noise for wind gusting
+    const bufferSize = this.ctx.sampleRate * 3;
+    const windBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+    const data = windBuffer.getChannelData(0);
+    let b0 = 0, b1 = 0, b2 = 0;
+    for (let i = 0; i < bufferSize; i++) {
+      const white = Math.random() * 2 - 1;
+      b0 = 0.99765 * b0 + white * 0.0990460;
+      b1 = 0.96300 * b1 + white * 0.1392500;
+      b2 = 0.57000 * b2 + white * 0.8665000;
+      data[i] = (b0 + b1 + b2) * 0.12;
+    }
+
+    this.windNoiseNode = this.ctx.createBufferSource();
+    this.windNoiseNode.buffer = windBuffer;
+    this.windNoiseNode.loop = true;
+
+    this.windNoiseFilter = this.ctx.createBiquadFilter();
+    this.windNoiseFilter.type = 'lowpass';
+    this.windNoiseFilter.frequency.setValueAtTime(260, this.ctx.currentTime);
+    this.windNoiseFilter.Q.setValueAtTime(2.5, this.ctx.currentTime);
+
+    this.windGain = this.ctx.createGain();
+    this.windGain.gain.setValueAtTime(0.02, this.ctx.currentTime);
+
+    this.windNoiseNode.connect(this.windNoiseFilter);
+    this.windNoiseFilter.connect(this.windGain);
+    this.windGain.connect(this.sfxGain);
+
+    // Whistling wind resonance for blizzards
+    this.windWhistleOsc = this.ctx.createOscillator();
+    this.windWhistleOsc.type = 'sine';
+    this.windWhistleOsc.frequency.setValueAtTime(420, this.ctx.currentTime);
+
+    this.windWhistleGain = this.ctx.createGain();
+    this.windWhistleGain.gain.setValueAtTime(0, this.ctx.currentTime);
+
+    this.windWhistleOsc.connect(this.windWhistleGain);
+    this.windWhistleGain.connect(this.sfxGain);
+
+    this.windNoiseNode.start();
+    this.windWhistleOsc.start();
+  }
+
+  /**
+   * Set active weather atmosphere and modulate ambient wind audio
+   */
+  public setWeatherType(weatherType: string, windSpeedKmh: number) {
+    this.currentWeatherType = weatherType;
+    if (!this.ctx || !this.windGain || !this.windNoiseFilter || !this.windWhistleGain || !this.windWhistleOsc) return;
+
+    const t = this.ctx.currentTime;
+    if (weatherType === 'blizzard') {
+      // Fierce roaring wind and eerie whistling
+      this.windGain.gain.setTargetAtTime(0.18, t, 0.4);
+      this.windNoiseFilter.frequency.setTargetAtTime(580, t, 0.4);
+      this.windWhistleGain.gain.setTargetAtTime(0.045, t, 0.5);
+      this.windWhistleOsc.frequency.setTargetAtTime(540 + Math.random() * 60, t, 0.5);
+    } else if (weatherType === 'golden_hearth') {
+      // Quiet, gentle calm breeze
+      this.windGain.gain.setTargetAtTime(0.015, t, 0.5);
+      this.windNoiseFilter.frequency.setTargetAtTime(220, t, 0.5);
+      this.windWhistleGain.gain.setTargetAtTime(0, t, 0.3);
+    } else if (weatherType === 'aurora_shower') {
+      // Ethereal soft breeze
+      this.windGain.gain.setTargetAtTime(0.035, t, 0.4);
+      this.windNoiseFilter.frequency.setTargetAtTime(340, t, 0.4);
+      this.windWhistleGain.gain.setTargetAtTime(0.01, t, 0.4);
+      this.windWhistleOsc.frequency.setTargetAtTime(880, t, 0.4);
+      this.playAuroraChime();
+    } else {
+      // Standard flurry
+      const speedNorm = Math.min(1, windSpeedKmh / 50);
+      this.windGain.gain.setTargetAtTime(0.03 + speedNorm * 0.04, t, 0.4);
+      this.windNoiseFilter.frequency.setTargetAtTime(280 + speedNorm * 120, t, 0.4);
+      this.windWhistleGain.gain.setTargetAtTime(0, t, 0.3);
+    }
+  }
+
+  /**
+   * Sparkling celestial bell chime played when Aurora starlight bursts
+   */
+  public playAuroraChime() {
+    if (!this.ctx || !this.sfxGain || !this.isSfxEnabled) return;
+    const t = this.ctx.currentTime;
+    const freqs = [880.0, 1108.73, 1318.51, 1760.0]; // A5, C#6, E6, A6
+
+    freqs.forEach((freq, idx) => {
+      const noteTime = t + idx * 0.08;
+      const osc = this.ctx!.createOscillator();
+      const gain = this.ctx!.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, noteTime);
+
+      gain.gain.setValueAtTime(0.09, noteTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, noteTime + 0.6);
+
+      osc.connect(gain);
+      gain.connect(this.sfxGain!);
+
+      osc.start(noteTime);
+      osc.stop(noteTime + 0.65);
+    });
   }
 
   /**

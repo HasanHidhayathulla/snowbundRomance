@@ -3,13 +3,14 @@
  */
 
 import React from 'react';
-import { BookOpen, Camera, Play, Radio, RotateCcw, Settings, Volume2, VolumeX, Wrench } from 'lucide-react';
+import { BookOpen, Camera, CloudSnow, Play, Radio, RotateCcw, Settings, Volume2, VolumeX, Wrench } from 'lucide-react';
 
 interface PauseModalProps {
   onResume: () => void;
   onRestart: () => void;
   onOpenWorkshop: () => void;
   onOpenScrapbook: () => void;
+  onOpenWeatherModal?: () => void;
   onOpenPhotoMode: () => void;
   onOpenDispatchRadio: () => void;
   onOpenSettings: () => void;
@@ -24,6 +25,7 @@ export const PauseModal: React.FC<PauseModalProps> = ({
   onRestart,
   onOpenWorkshop,
   onOpenScrapbook,
+  onOpenWeatherModal,
   onOpenPhotoMode,
   onOpenDispatchRadio,
   onOpenSettings,
@@ -57,6 +59,16 @@ export const PauseModal: React.FC<PauseModalProps> = ({
             <Radio className="w-4 h-4 text-sky-400" />
             <span>Village Dispatches & Solstice Radio (Q)</span>
           </button>
+
+          {onOpenWeatherModal && (
+            <button
+              onClick={onOpenWeatherModal}
+              className="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-sky-300 font-medium flex items-center justify-center gap-2 border border-slate-700 transition-colors cursor-pointer"
+            >
+              <CloudSnow className="w-4 h-4 text-sky-400" />
+              <span>Solstice Weather & Barometer (B)</span>
+            </button>
+          )}
 
           <button
             onClick={onOpenWorkshop}

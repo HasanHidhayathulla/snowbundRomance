@@ -38,6 +38,13 @@ export class ParticleSystem {
   private snowPositions: Float32Array;
   private snowVelocities: Float32Array;
 
+  // Weather-driven dynamics
+  private windVx: number = 0.5;
+  private windVz: number = 0.2;
+  private weatherIntensity: number = 1.0;
+  private isBlizzard: boolean = false;
+  private isAurora: boolean = false;
+
   constructor(scene: THREE.Scene) {
     // 1. Dynamic action particles (plow spray, hearts, sparks)
     this.positions = new Float32Array(this.maxParticles * 3);
@@ -164,6 +171,59 @@ export class ParticleSystem {
   /**
    * Emit romantic heart / sparkle burst
    */
+  /**
+   * Set ambient wind and weather characteristics for falling snow & particles
+   */
+  public setWeatherParameters(windSpeedKmh: number, windAngleRad: number, weatherType: string) {
+    const speedRatio = windSpeedKmh / 30; // normalized speed
+    this.windVx = Math.sin(windAngleRad) * speedRatio * 3.5;
+    this.windVz = Math.cos(windAngleRad) * speedRatio * 3.5;
+    this.isBlizzard = weatherType === 'blizzard';
+    this.isAurora = weatherType === 'aurora_shower';
+    this.weatherIntensity = this.isBlizzard ? 2.2 : (weatherType === 'golden_hearth' ? 0.6 : 1.0);
+
+    // Modulate snowflake material appearance
+    const mat = this.snowMesh.material as THREE.PointsMaterial;
+    if (this.isBlizzard) {
+      mat.size = 0.38;
+      mat.opacity = 0.95;
+      mat.color.setHex(0xe2e8f0);
+    } else if (this.isAurora) {
+      mat.size = 0.28;
+      mat.opacity = 0.9;
+      mat.color.setHex(0xa7f3d0); // subtle shimmering green tint
+    } else {
+      mat.size = 0.22;
+      mat.opacity = 0.85;
+      mat.color.setHex(0xffffff);
+    }
+  }
+
+  /**
+   * Emit celestial aurora starlight sparkle
+   */
+  public emitAuroraSparkles(x: number, y: number, z: number, count: number = 6) {
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 0.8 + Math.random() * 1.5;
+      const isEmerald = Math.random() > 0.4;
+
+      this.spawnParticle(
+        x + (Math.random() - 0.5) * 2,
+        y + 0.5 + Math.random() * 1.5,
+        z + (Math.random() - 0.5) * 2,
+        Math.sin(angle) * speed,
+        0.5 + Math.random() * 1.5,
+        Math.cos(angle) * speed,
+        0.9 + Math.random() * 0.5,
+        0.4,
+        isEmerald ? 0.2 : 0.75,
+        isEmerald ? 0.95 : 0.4,
+        isEmerald ? 0.7 : 0.95
+      );
+    }
+  }
+
   public emitRomanticHearts(x: number, y: number, z: number, count: number = 8) {
     for (let i = 0; i < count; i++) {
       const dirAngle = Math.random() * Math.PI * 2;
@@ -288,24 +348,31 @@ export class ParticleSystem {
     posAttr.needsUpdate = true;
     colAttr.needsUpdate = true;
 
-    // 2. Update ambient snow centered around camera
+    // 2. Update ambient snow centered around camera with wind drift
     const snowAttr = this.snowMesh.geometry.getAttribute('position') as THREE.BufferAttribute;
+    const fallSpeedMult = this.isBlizzard ? 1.8 : 1.0;
+
     for (let i = 0; i < this.maxSnowflakes; i++) {
-      let sx = this.snowPositions[i * 3 + 0] + this.snowVelocities[i * 3 + 0] * dt;
-      let sy = this.snowPositions[i * 3 + 1] + this.snowVelocities[i * 3 + 1] * dt;
-      let sz = this.snowPositions[i * 3 + 2] + this.snowVelocities[i * 3 + 2] * dt;
+      // Apply ambient wind vector
+      const currentVx = this.snowVelocities[i * 3 + 0] + this.windVx;
+      const currentVy = this.snowVelocities[i * 3 + 1] * fallSpeedMult;
+      const currentVz = this.snowVelocities[i * 3 + 2] + this.windVz;
+
+      let sx = this.snowPositions[i * 3 + 0] + currentVx * dt;
+      let sy = this.snowPositions[i * 3 + 1] + currentVy * dt;
+      let sz = this.snowPositions[i * 3 + 2] + currentVz * dt;
 
       // Wrap snow within camera volume
       if (sy < 0.2) {
-        sy = 22 + Math.random() * 4;
-        sx = cameraPos.x + (Math.random() - 0.5) * 70;
-        sz = cameraPos.z + (Math.random() - 0.5) * 70;
+        sy = 24 + Math.random() * 4;
+        sx = cameraPos.x + (Math.random() - 0.5) * 75 - this.windVx * 2;
+        sz = cameraPos.z + (Math.random() - 0.5) * 75 - this.windVz * 2;
       }
-      if (Math.abs(sx - cameraPos.x) > 40) {
-        sx = cameraPos.x + (Math.random() - 0.5) * 40;
+      if (Math.abs(sx - cameraPos.x) > 45) {
+        sx = cameraPos.x + (Math.random() - 0.5) * 45;
       }
-      if (Math.abs(sz - cameraPos.z) > 40) {
-        sz = cameraPos.z + (Math.random() - 0.5) * 40;
+      if (Math.abs(sz - cameraPos.z) > 45) {
+        sz = cameraPos.z + (Math.random() - 0.5) * 45;
       }
 
       this.snowPositions[i * 3 + 0] = sx;

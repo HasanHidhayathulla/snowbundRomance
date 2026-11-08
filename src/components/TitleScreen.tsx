@@ -5,7 +5,7 @@
  */
 
 import React from 'react';
-import { BookOpen, Heart, Radio, Settings, Sparkles, Volume2, VolumeX } from 'lucide-react';
+import { BookOpen, CloudSnow, Heart, Radio, Settings, Sparkles, Volume2, VolumeX } from 'lucide-react';
 import { synthAudio } from '../audio/synthAudio';
 
 interface TitleScreenProps {
@@ -13,6 +13,7 @@ interface TitleScreenProps {
   isMuted: boolean;
   onToggleMute: () => void;
   onOpenDispatchRadio?: () => void;
+  onOpenWeatherModal?: () => void;
   onOpenScrapbook: () => void;
   onOpenSettings: () => void;
 }
@@ -22,6 +23,7 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
   isMuted,
   onToggleMute,
   onOpenDispatchRadio,
+  onOpenWeatherModal,
   onOpenScrapbook,
   onOpenSettings,
 }) => {
@@ -42,6 +44,16 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
             >
               <Radio className="w-3.5 h-3.5 text-sky-400" />
               <span>Radio</span>
+            </button>
+          )}
+
+          {onOpenWeatherModal && (
+            <button
+              onClick={onOpenWeatherModal}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-slate-900/80 border border-slate-700/60 hover:bg-slate-800 text-xs text-sky-300 transition-colors cursor-pointer"
+            >
+              <CloudSnow className="w-3.5 h-3.5 text-sky-400" />
+              <span>Weather</span>
             </button>
           )}
 

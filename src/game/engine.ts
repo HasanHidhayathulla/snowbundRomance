@@ -17,7 +17,9 @@ import {
   TRACTOR_DECALS,
   TRACTOR_PAINTS,
   UPGRADES,
+  WEATHER_CONDITIONS,
   WORLD_SIZE,
+  type ActiveWeatherState,
   type GameState,
   type Landmark,
   type RadioStation,
@@ -25,6 +27,8 @@ import {
   type SolsticeQuest,
   type TractorDecal,
   type TractorPaint,
+  type WeatherCondition,
+  type WeatherType,
 } from './constants';
 import {
   loadGameProgress,
@@ -85,6 +89,7 @@ export interface GameHUDStats {
   unlockedPaintIds: string[];
   selectedDecalId: string;
   unlockedDecalIds: string[];
+  weather: ActiveWeatherState;
 }
 
 import {
@@ -122,6 +127,17 @@ export class SnowPlowGameEngine {
   private sunLight!: THREE.DirectionalLight;
   private rimLight!: THREE.DirectionalLight;
   private atmosphere: SolsticeAtmosphere = 'twilight';
+
+  // Dynamic Weather Simulation State
+  private weatherSequence: WeatherType[] = ['flurry', 'blizzard', 'golden_hearth', 'aurora_shower'];
+  private weatherIndex: number = 0;
+  private weatherTimer: number = 120;
+  private currentWeather: WeatherCondition = WEATHER_CONDITIONS.flurry;
+  private nextWeather: WeatherCondition = WEATHER_CONDITIONS.blizzard;
+  private currentWindSpeed: number = 12;
+  private currentTemperature: number = -4;
+  private currentWindAngle: number = 0.35;
+  private weatherEventsWitnessed: number = 0;
 
   // Vehicle Physics State
   private posX: number = 0;
@@ -205,6 +221,15 @@ export class SnowPlowGameEngine {
     this.selectedPaintId = saved.selectedPaintId || 'crimson';
     this.unlockedDecalIds = saved.unlockedDecalIds || ['heart'];
     this.selectedDecalId = saved.selectedDecalId || 'heart';
+    this.weatherEventsWitnessed = saved.weatherEventsWitnessed || 0;
+
+    // Initialize weather
+    this.currentWeather = WEATHER_CONDITIONS.flurry;
+    this.nextWeather = WEATHER_CONDITIONS.blizzard;
+    this.weatherTimer = this.currentWeather.durationSec;
+    this.currentWindSpeed = this.currentWeather.windSpeedKmh;
+    this.currentTemperature = this.currentWeather.temperatureC;
+    this.currentWindAngle = this.currentWeather.windAngleRad;
 
     this.initWebGL();
     this.initScene();
@@ -550,6 +575,13 @@ export class SnowPlowGameEngine {
           this.cycleRadioStation();
         }
       }
+      if (e.code === 'KeyB') {
+        if (this.gameState === 'PLAYING') {
+          this.setGameState('WEATHER');
+        } else if (this.gameState === 'WEATHER') {
+          this.setGameState('PLAYING');
+        }
+      }
     });
 
     window.addEventListener('keyup', (e) => {
@@ -816,6 +848,133 @@ export class SnowPlowGameEngine {
     return true;
   }
 
+  /**
+   * Dynamic Weather State Cycle and Atmospheric Blending
+   */
+  private updateWeatherSimulation(dt: number) {
+    this.weatherTimer -= dt;
+
+    // Smooth weather parameter interpolation
+    this.currentWindSpeed = THREE.MathUtils.damp(
+      this.currentWindSpeed,
+      this.currentWeather.windSpeedKmh,
+      1.5,
+      dt
+    );
+    this.currentTemperature = THREE.MathUtils.damp(
+      this.currentTemperature,
+      this.currentWeather.temperatureC,
+      1.2,
+      dt
+    );
+    this.currentWindAngle = THREE.MathUtils.damp(
+      this.currentWindAngle,
+      this.currentWeather.windAngleRad,
+      1.0,
+      dt
+    );
+
+    // Apply wind and weather to particle system
+    this.particles.setWeatherParameters(
+      this.currentWindSpeed,
+      this.currentWindAngle,
+      this.currentWeather.id
+    );
+
+    // During Blizzard: slowly replenish snow on unplowed areas
+    if (this.currentWeather.id === 'blizzard' && this.currentWeather.snowRefillRate > 0) {
+      this.snowGrid.replenishSnowDrifts(this.currentWeather.snowRefillRate, dt);
+      if (this.isPlowing) {
+        this.checkAchievement('blizzard_survivor');
+      }
+    }
+
+    // During Aurora: occasionally emit celestial starlight sparkles
+    if (this.currentWeather.id === 'aurora_shower') {
+      if (Math.random() < 0.25) {
+        this.particles.emitAuroraSparkles(this.posX, 1.5, this.posZ, 4);
+      }
+      if (this.isPlowing) {
+        this.checkAchievement('aurora_glider');
+      }
+    }
+
+    // Dynamic Fog & Sky adjustments
+    if (this.scene && this.scene.fog instanceof THREE.FogExp2) {
+      this.scene.fog.density = THREE.MathUtils.damp(
+        this.scene.fog.density,
+        this.currentWeather.skyFogDensity,
+        0.8,
+        dt
+      );
+    }
+
+    // Weather transition when timer expires
+    if (this.weatherTimer <= 0) {
+      this.advanceWeather();
+    }
+  }
+
+  public advanceWeather() {
+    this.weatherIndex = (this.weatherIndex + 1) % this.weatherSequence.length;
+    const nextType = this.weatherSequence[this.weatherIndex];
+    const followingIndex = (this.weatherIndex + 1) % this.weatherSequence.length;
+    const followingType = this.weatherSequence[followingIndex];
+
+    this.currentWeather = WEATHER_CONDITIONS[nextType];
+    this.nextWeather = WEATHER_CONDITIONS[followingType];
+    this.weatherTimer = this.currentWeather.durationSec;
+    this.weatherEventsWitnessed++;
+
+    // Update synth audio atmosphere
+    synthAudio.setWeatherType(this.currentWeather.id, this.currentWeather.windSpeedKmh);
+
+    // Update Scene Lighting to reflect new weather
+    this.applyWeatherLighting(this.currentWeather);
+
+    // Trigger HUD event message
+    this.triggerMessage(`🌦 Weather Shift: ${this.currentWeather.name}! ${this.currentWeather.tagline}`);
+    this.saveProgressState();
+    this.pushHUDUpdate();
+  }
+
+  public forceWeather(weatherType: WeatherType) {
+    const cond = WEATHER_CONDITIONS[weatherType];
+    if (!cond) return;
+
+    this.currentWeather = cond;
+    this.weatherTimer = cond.durationSec;
+    const idx = this.weatherSequence.indexOf(weatherType);
+    if (idx !== -1) {
+      this.weatherIndex = idx;
+      this.nextWeather = WEATHER_CONDITIONS[this.weatherSequence[(idx + 1) % this.weatherSequence.length]];
+    }
+
+    synthAudio.setWeatherType(cond.id, cond.windSpeedKmh);
+    this.applyWeatherLighting(cond);
+    this.triggerMessage(`🌦 Weather changed to: ${cond.name}!`);
+    this.checkAchievement('weather_watcher');
+    this.pushHUDUpdate();
+  }
+
+  private applyWeatherLighting(cond: WeatherCondition) {
+    if (!this.scene) return;
+    this.scene.background = new THREE.Color(cond.skyBgHex);
+    if (this.scene.fog instanceof THREE.FogExp2) {
+      this.scene.fog.color.setHex(cond.fogColorHex);
+      this.scene.fog.density = cond.skyFogDensity;
+    }
+    if (this.hemiLight) {
+      this.hemiLight.color.setHex(cond.hemiLightHex);
+    }
+    if (this.sunLight) {
+      this.sunLight.color.setHex(cond.sunLightHex);
+    }
+    if (this.rimLight) {
+      this.rimLight.color.setHex(cond.rimLightHex);
+    }
+  }
+
   private saveProgressState() {
     saveGameProgress({
       loveLetters: this.loveLetters,
@@ -827,6 +986,7 @@ export class SnowPlowGameEngine {
       selectedPaintId: this.selectedPaintId,
       unlockedDecalIds: [...this.unlockedDecalIds],
       selectedDecalId: this.selectedDecalId,
+      weatherEventsWitnessed: this.weatherEventsWitnessed,
     });
   }
 
@@ -1014,6 +1174,9 @@ export class SnowPlowGameEngine {
       this.checkAchievement('speed_demon');
     }
 
+    // Weather simulation update
+    this.updateWeatherSimulation(dt);
+
     // Wheel animation & steering
     const wheelRotSpeed = (this.speed / 0.65) * dt;
     this.frontWheels.forEach((w) => {
@@ -1080,9 +1243,9 @@ export class SnowPlowGameEngine {
           this.particles.emitRomanticHearts(this.posX, 1.2, this.posZ, 8);
           this.cameraShakeIntensity = 0.15;
 
-          // Gain love letters on combo progression
+          // Gain love letters on combo progression (augmented by weather multiplier)
           const currentCombo = COMBO_LEVELS[this.comboLevel - 1];
-          const lettersGained = Math.round(5 * currentCombo.multiplier);
+          const lettersGained = Math.round(5 * currentCombo.multiplier * this.currentWeather.letterMultiplier);
           this.loveLetters += lettersGained;
           saveGameProgress({ loveLetters: this.loveLetters });
           this.triggerMessage(`${currentCombo.title}! Combo x${currentCombo.multiplier.toFixed(1)} (+${lettersGained} Letters)`);
@@ -1318,6 +1481,15 @@ export class SnowPlowGameEngine {
     this.onHUDUpdate({
       gameState: this.gameState,
       snowClearedPercent: this.snowClearedPercent,
+      weather: {
+        current: this.currentWeather,
+        next: this.nextWeather,
+        remainingSec: Math.max(0, this.weatherTimer),
+        totalDurationSec: this.currentWeather.durationSec,
+        windSpeedKmh: Math.round(this.currentWindSpeed),
+        temperatureC: Math.round(this.currentTemperature),
+        windAngleRad: this.currentWindAngle,
+      },
       loveLetters: this.loveLetters,
       comboLevel: this.comboLevel,
       comboMultiplier: currentCombo.multiplier,
@@ -1357,6 +1529,15 @@ export class SnowPlowGameEngine {
     return {
       gameState: this.gameState,
       snowClearedPercent: this.snowClearedPercent,
+      weather: {
+        current: this.currentWeather,
+        next: this.nextWeather,
+        remainingSec: Math.max(0, this.weatherTimer),
+        totalDurationSec: this.currentWeather.durationSec,
+        windSpeedKmh: Math.round(this.currentWindSpeed),
+        temperatureC: Math.round(this.currentTemperature),
+        windAngleRad: this.currentWindAngle,
+      },
       loveLetters: this.loveLetters,
       comboLevel: this.comboLevel,
       comboMultiplier: currentCombo.multiplier,

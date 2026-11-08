@@ -220,6 +220,52 @@ export class SnowGridSystem {
   }
 
   /**
+   * Replenish snow drifts gradually during severe blizzards
+   * @param rate Intensity factor (e.g. 0.04)
+   * @param dt Delta time in seconds
+   */
+  public replenishSnowDrifts(rate: number, dt: number) {
+    if (rate <= 0) return;
+
+    // Pick random cells to gradually refill to avoid performance hit of updating entire canvas every frame
+    const samplesPerTick = Math.floor(180 * rate * dt * 60);
+    const halfWorld = WORLD_SIZE / 2;
+    const texSize = this.canvas.width;
+
+    this.ctx.save();
+    this.ctx.globalCompositeOperation = 'source-over';
+    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+
+    for (let s = 0; s < samplesPerTick; s++) {
+      const idx = Math.floor(Math.random() * this.totalCells);
+      if (this.depthGrid[idx] < 0.9) {
+        this.depthGrid[idx] = Math.min(1.0, this.depthGrid[idx] + 0.3);
+        const gx = idx % SNOW_GRID_RES;
+        const gz = Math.floor(idx / SNOW_GRID_RES);
+
+        const cx = (gx / SNOW_GRID_RES) * texSize;
+        const cy = (gz / SNOW_GRID_RES) * texSize;
+
+        this.ctx.beginPath();
+        this.ctx.arc(cx, cy, 3.5, 0, Math.PI * 2);
+        this.ctx.fill();
+      }
+    }
+
+    this.ctx.restore();
+    this.snowTexture.needsUpdate = true;
+
+    // Recalculate cleared count
+    let cleared = 0;
+    for (let i = 0; i < this.totalCells; i++) {
+      if (this.depthGrid[i] < 0.2) {
+        cleared++;
+      }
+    }
+    this.clearedCells = cleared;
+  }
+
+  /**
    * Check snow depth at a given world position
    */
   public getSnowDepthAt(wx: number, wz: number): number {

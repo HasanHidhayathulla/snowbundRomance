@@ -2,7 +2,133 @@
  * Game constants, upgrade definitions, collectibles, and balance parameters
  */
 
-export type GameState = 'TITLE' | 'PLAYING' | 'PAUSED' | 'GARAGE' | 'VICTORY' | 'SCRAPBOOK' | 'SETTINGS' | 'PHOTO' | 'DISPATCH_RADIO';
+export type GameState = 'TITLE' | 'PLAYING' | 'PAUSED' | 'GARAGE' | 'VICTORY' | 'SCRAPBOOK' | 'SETTINGS' | 'PHOTO' | 'DISPATCH_RADIO' | 'WEATHER';
+
+export type WeatherType = 'flurry' | 'blizzard' | 'golden_hearth' | 'aurora_shower';
+
+export interface WeatherCondition {
+  id: WeatherType;
+  name: string;
+  tagline: string;
+  description: string;
+  temperatureC: number;
+  windSpeedKmh: number;
+  windAngleRad: number;
+  visibilityPercent: number;
+  snowRefillRate: number; // 0 = no refill, >0 = replenishes snow
+  letterMultiplier: number;
+  speedModifier: number;
+  iconName: string;
+  colorHex: string;
+  skyFogDensity: number;
+  fogColorHex: number;
+  skyBgHex: number;
+  hemiLightHex: number;
+  sunLightHex: number;
+  rimLightHex: number;
+  durationSec: number;
+}
+
+export const WEATHER_CONDITIONS: Record<WeatherType, WeatherCondition> = {
+  flurry: {
+    id: 'flurry',
+    name: 'Gentle Flurries',
+    tagline: 'Soft crystalline snowfall drifting lazily over the rooftops',
+    description: 'Crisp winter afternoon with calm breezes. Standard snow-clearing conditions across Valentine Valley.',
+    temperatureC: -4,
+    windSpeedKmh: 12,
+    windAngleRad: 0.35,
+    visibilityPercent: 95,
+    snowRefillRate: 0,
+    letterMultiplier: 1.0,
+    speedModifier: 1.0,
+    iconName: 'CloudSnow',
+    colorHex: '#38bdf8',
+    skyFogDensity: 0.016,
+    fogColorHex: 0x0e172a,
+    skyBgHex: 0x0c1322,
+    hemiLightHex: 0xbfdbfe,
+    sunLightHex: 0xffedd5,
+    rimLightHex: 0xf472b6,
+    durationSec: 120,
+  },
+  blizzard: {
+    id: 'blizzard',
+    name: 'Solstice Whiteout Blizzard',
+    tagline: 'Fierce sub-zero squalls rolling down from Mount Amour',
+    description: 'Heavy powder replenishment! The wind howls and visibility shrinks, but villagers are extra grateful (+50% bonus Letters).',
+    temperatureC: -16,
+    windSpeedKmh: 48,
+    windAngleRad: 1.15,
+    visibilityPercent: 55,
+    snowRefillRate: 0.04,
+    letterMultiplier: 1.5,
+    speedModifier: 0.92,
+    iconName: 'Wind',
+    colorHex: '#60a5fa',
+    skyFogDensity: 0.038,
+    fogColorHex: 0x1e293b,
+    skyBgHex: 0x0f172a,
+    hemiLightHex: 0x93c5fd,
+    sunLightHex: 0xe2e8f0,
+    rimLightHex: 0x38bdf8,
+    durationSec: 85,
+  },
+  golden_hearth: {
+    id: 'golden_hearth',
+    name: 'Golden Hearth Warm Front',
+    tagline: 'Amber rays breaking through the winter clouds',
+    description: 'A comforting break in the storm. The sun melts snowdrifts near the tractor and engine boilers run at peak thermal efficiency.',
+    temperatureC: 1,
+    windSpeedKmh: 6,
+    windAngleRad: -0.4,
+    visibilityPercent: 100,
+    snowRefillRate: 0,
+    letterMultiplier: 1.2,
+    speedModifier: 1.12,
+    iconName: 'Sun',
+    colorHex: '#fbbf24',
+    skyFogDensity: 0.012,
+    fogColorHex: 0x271306,
+    skyBgHex: 0x1a0f0a,
+    hemiLightHex: 0xfef08a,
+    sunLightHex: 0xfde68a,
+    rimLightHex: 0xf97316,
+    durationSec: 90,
+  },
+  aurora_shower: {
+    id: 'aurora_shower',
+    name: 'Aurora Borealis Starlight Shower',
+    tagline: 'Magical green ribbons and cosmic stardust dancing overhead',
+    description: 'The winter solstice miracle! Cosmic stardust grants extended combo timer grace, ethereal synth chimes, and double romantic drops.',
+    temperatureC: -8,
+    windSpeedKmh: 16,
+    windAngleRad: 2.1,
+    visibilityPercent: 88,
+    snowRefillRate: 0,
+    letterMultiplier: 2.0,
+    speedModifier: 1.18,
+    iconName: 'Sparkles',
+    colorHex: '#34d399',
+    skyFogDensity: 0.015,
+    fogColorHex: 0x08261e,
+    skyBgHex: 0x061814,
+    hemiLightHex: 0x6ee7b7,
+    sunLightHex: 0xa7f3d0,
+    rimLightHex: 0xc084fc,
+    durationSec: 100,
+  },
+};
+
+export interface ActiveWeatherState {
+  current: WeatherCondition;
+  next: WeatherCondition;
+  remainingSec: number;
+  totalDurationSec: number;
+  windSpeedKmh: number;
+  temperatureC: number;
+  windAngleRad: number;
+}
 
 export interface SolsticeQuest {
   id: string;
@@ -411,6 +537,27 @@ export const ACHIEVEMENTS: SolsticeAchievement[] = [
     description: 'Customize your Heartplow tractor with a new livery paint job.',
     icon: 'Flame',
     rewardLetters: 30,
+  },
+  {
+    id: 'blizzard_survivor',
+    title: 'Blizzard Breaker',
+    description: 'Plow snow during a ferocious Solstice Whiteout Blizzard.',
+    icon: 'Wind',
+    rewardLetters: 35,
+  },
+  {
+    id: 'aurora_glider',
+    title: 'Aurora Starlight Glider',
+    description: 'Plow roads under the mystical green radiance of an Aurora Shower.',
+    icon: 'Sparkles',
+    rewardLetters: 45,
+  },
+  {
+    id: 'weather_watcher',
+    title: 'Solstice Meteorologist',
+    description: 'Consult the Valley Weather Observatory and Barometer forecast.',
+    icon: 'CloudSnow',
+    rewardLetters: 25,
   },
 ];
 

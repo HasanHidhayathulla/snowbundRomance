@@ -14,7 +14,8 @@ import { SettingsModal } from './components/SettingsModal';
 import { ShopModal } from './components/ShopModal';
 import { TitleScreen } from './components/TitleScreen';
 import { VictoryModal } from './components/VictoryModal';
-import { ACHIEVEMENTS, LANDMARKS, ROMANTIC_GIFTS } from './game/constants';
+import { WeatherModal } from './components/WeatherModal';
+import { ACHIEVEMENTS, LANDMARKS, ROMANTIC_GIFTS, WEATHER_CONDITIONS, type WeatherType } from './game/constants';
 import { SnowPlowGameEngine, type GameHUDStats } from './game/engine';
 import {
   clearGameData,
@@ -73,6 +74,15 @@ export default function App() {
     unlockedPaintIds: ['crimson'],
     selectedDecalId: 'heart',
     unlockedDecalIds: ['heart'],
+    weather: {
+      current: WEATHER_CONDITIONS.flurry,
+      next: WEATHER_CONDITIONS.blizzard,
+      remainingSec: 120,
+      totalDurationSec: 120,
+      windSpeedKmh: 12,
+      temperatureC: -4,
+      windAngleRad: 0.35,
+    },
   });
 
   useEffect(() => {
@@ -127,6 +137,24 @@ export default function App() {
   const handleOpenDispatchRadio = () => {
     if (engineRef.current) {
       engineRef.current.setGameState('DISPATCH_RADIO');
+    }
+  };
+
+  const handleOpenWeatherModal = () => {
+    if (engineRef.current) {
+      engineRef.current.setGameState('WEATHER');
+    }
+  };
+
+  const handleForceWeather = (weatherType: WeatherType) => {
+    if (engineRef.current) {
+      engineRef.current.forceWeather(weatherType);
+    }
+  };
+
+  const handleAdvanceWeather = () => {
+    if (engineRef.current) {
+      engineRef.current.advanceWeather();
     }
   };
 
@@ -261,6 +289,7 @@ export default function App() {
           isMuted={settings.isMuted}
           onToggleMute={handleToggleMute}
           onOpenDispatchRadio={handleOpenDispatchRadio}
+          onOpenWeatherModal={handleOpenWeatherModal}
           onOpenScrapbook={handleOpenScrapbook}
           onOpenSettings={handleOpenSettings}
         />
@@ -274,6 +303,7 @@ export default function App() {
           onOpenScrapbook={handleOpenScrapbook}
           onOpenPhotoMode={handleOpenPhotoMode}
           onOpenDispatchRadio={handleOpenDispatchRadio}
+          onOpenWeatherModal={handleOpenWeatherModal}
           onOpenSettings={handleOpenSettings}
           onPause={handlePause}
           onCycleRadio={handleCycleRadio}
@@ -281,6 +311,16 @@ export default function App() {
           onToggleMute={handleToggleMute}
           showRadar={settings.showRadar}
           onVirtualInput={handleVirtualInput}
+        />
+      )}
+
+      {/* 3.2 Solstice Weather Observatory & Barometer Modal */}
+      {stats.gameState === 'WEATHER' && (
+        <WeatherModal
+          weather={stats.weather}
+          onForceWeather={handleForceWeather}
+          onAdvanceWeather={handleAdvanceWeather}
+          onClose={stats.snowClearedPercent > 0 ? handleResume : () => engineRef.current?.setGameState('TITLE')}
         />
       )}
 
@@ -321,6 +361,7 @@ export default function App() {
           onRestart={handleRestart}
           onOpenWorkshop={handleOpenWorkshop}
           onOpenDispatchRadio={handleOpenDispatchRadio}
+          onOpenWeatherModal={handleOpenWeatherModal}
           onOpenScrapbook={handleOpenScrapbook}
           onOpenPhotoMode={handleOpenPhotoMode}
           onOpenSettings={handleOpenSettings}

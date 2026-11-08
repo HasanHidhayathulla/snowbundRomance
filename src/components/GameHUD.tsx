@@ -30,6 +30,7 @@ import {
 import { COMBO_LEVELS } from '../game/constants';
 import type { GameHUDStats } from '../game/engine';
 import { VillageRadar } from './VillageRadar';
+import { WeatherWidget } from './WeatherWidget';
 
 interface GameHUDProps {
   stats: GameHUDStats;
@@ -37,6 +38,7 @@ interface GameHUDProps {
   onOpenScrapbook: () => void;
   onOpenPhotoMode: () => void;
   onOpenDispatchRadio: () => void;
+  onOpenWeatherModal: () => void;
   onOpenSettings: () => void;
   onPause: () => void;
   onCycleRadio: () => void;
@@ -52,6 +54,7 @@ export const GameHUD: React.FC<GameHUDProps> = ({
   onOpenScrapbook,
   onOpenPhotoMode,
   onOpenDispatchRadio,
+  onOpenWeatherModal,
   onOpenSettings,
   onPause,
   onCycleRadio,
@@ -87,6 +90,11 @@ export const GameHUD: React.FC<GameHUDProps> = ({
                 style={{ width: `${Math.min(100, stats.snowClearedPercent)}%` }}
               />
             </div>
+          </div>
+
+          {/* Dynamic Weather Forecast Widget */}
+          <div className="pointer-events-auto">
+            <WeatherWidget weather={stats.weather} onOpenWeatherModal={onOpenWeatherModal} />
           </div>
 
           {/* Landmarks & Gifts Mini Status */}
@@ -426,6 +434,8 @@ export const GameHUD: React.FC<GameHUDProps> = ({
               <span>P Photo</span>
               <span>·</span>
               <span>G Atelier</span>
+              <span>·</span>
+              <span>B Weather</span>
               <span>·</span>
               <span>L Album</span>
             </div>

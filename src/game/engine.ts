@@ -13,18 +13,23 @@ import {
   LANDMARKS,
   RADIO_STATIONS,
   ROMANTIC_GIFTS,
+  SOLSTICE_CEREMONIES,
   SOLSTICE_QUESTS,
   TRACTOR_DECALS,
   TRACTOR_PAINTS,
   UPGRADES,
+  WEATHER_CONDITIONS,
   WORLD_SIZE,
   type GameState,
   type Landmark,
   type RadioStation,
   type RomanticGift,
+  type SolsticeFestivalCeremony,
   type SolsticeQuest,
   type TractorDecal,
   type TractorPaint,
+  type WeatherCondition,
+  type WeatherType,
 } from './constants';
 import {
   loadGameProgress,
@@ -85,6 +90,11 @@ export interface GameHUDStats {
   unlockedPaintIds: string[];
   selectedDecalId: string;
   unlockedDecalIds: string[];
+  currentWeather: WeatherType;
+  nextWeather: WeatherType;
+  timeUntilForecastSec: number;
+  activeCeremonyId: string | null;
+  activeCeremonyRemainingSec: number;
 }
 
 import {
@@ -163,6 +173,13 @@ export class SnowPlowGameEngine {
   private selectedDecalId: string = 'heart';
   private unlockedDecalIds: string[] = ['heart'];
   private questBeaconGroup!: THREE.Group;
+
+  // Weather & Solstice Festival State
+  private currentWeather: WeatherType = 'calm_snow';
+  private nextWeather: WeatherType = 'golden_dawn';
+  private weatherTimer: number = 120; // 120 seconds per forecast shift
+  private activeCeremonyId: string | null = null;
+  private activeCeremonyTimer: number = 0;
 
   // World Elements
   private landmarks: Landmark[] = [];
@@ -550,6 +567,14 @@ export class SnowPlowGameEngine {
           this.cycleRadioStation();
         }
       }
+      if (e.code === 'KeyO') {
+        if (this.gameState === 'PLAYING') {
+          this.setGameState('OBSERVATORY');
+          this.checkAchievement('weather_watcher');
+        } else if (this.gameState === 'OBSERVATORY') {
+          this.setGameState('PLAYING');
+        }
+      }
     });
 
     window.addEventListener('keyup', (e) => {
@@ -584,6 +609,46 @@ export class SnowPlowGameEngine {
     this.virtualBoost = boost;
     synthAudio.init();
     synthAudio.resume();
+  }
+
+  public setWeather(weather: WeatherType) {
+    this.currentWeather = weather;
+    const cond = WEATHER_CONDITIONS[weather];
+    this.applyAtmosphere(cond.skyAtmosphere);
+
+    synthAudio.updateWeatherAudio(cond.windSpeedKmh, weather === 'blizzard');
+    this.particles.setWeatherModifiers(cond.windSpeedKmh, weather === 'blizzard');
+
+    if (weather === 'aurora_solstice') {
+      synthAudio.playCelestialShimmer();
+      this.checkAchievement('aurora_reveler');
+    }
+    if (weather === 'blizzard') {
+      this.checkAchievement('blizzard_survivor');
+    }
+
+    this.triggerMessage(`Weather Shift: ${cond.name} (${cond.temperatureC}°C, Wind ${cond.windSpeedKmh}km/h)!`);
+    this.pushHUDUpdate();
+  }
+
+  public triggerSolsticeCeremony(ceremonyId: string): boolean {
+    const ceremony = SOLSTICE_CEREMONIES.find((c) => c.id === ceremonyId);
+    if (!ceremony) return false;
+
+    if (this.loveLetters < ceremony.costLetters) return false;
+    this.loveLetters -= ceremony.costLetters;
+
+    this.activeCeremonyId = ceremony.id;
+    this.activeCeremonyTimer = ceremony.durationSec;
+
+    synthAudio.playCelestialShimmer();
+    this.setWeather(ceremony.weatherTrigger);
+    this.particles.emitRomanticHearts(this.posX, 2.5, this.posZ, 30);
+    this.triggerMessage(`✨ Solstice Ceremony Invoked: ${ceremony.name}!`);
+
+    this.saveProgressState();
+    this.pushHUDUpdate();
+    return true;
   }
 
   public applyAtmosphere(atm: SolsticeAtmosphere) {
@@ -921,6 +986,27 @@ export class SnowPlowGameEngine {
       return;
     }
 
+    // Dynamic Weather progression & forecast timer
+    this.weatherTimer -= dt;
+    if (this.weatherTimer <= 0) {
+      this.weatherTimer = 120;
+      this.setWeather(this.nextWeather);
+
+      const weatherTypes: WeatherType[] = ['calm_snow', 'golden_dawn', 'blizzard', 'aurora_solstice'];
+      const remainingTypes = weatherTypes.filter((w) => w !== this.currentWeather);
+      this.nextWeather = remainingTypes[Math.floor(Math.random() * remainingTypes.length)];
+    }
+
+    if (this.activeCeremonyId && this.activeCeremonyTimer > 0) {
+      this.activeCeremonyTimer -= dt;
+      if (this.activeCeremonyTimer <= 0) {
+        this.activeCeremonyId = null;
+        this.triggerMessage('Solstice ceremony duration ended.');
+      }
+    }
+
+    const currentWeatherCond = WEATHER_CONDITIONS[this.currentWeather];
+
     // 1. Process Inputs (Continuous Held Keys + Virtual Inputs)
     let throttle = 0;
     if (this.keysHeld['KeyW'] || this.keysHeld['ArrowUp']) throttle += 1;
@@ -934,18 +1020,18 @@ export class SnowPlowGameEngine {
 
     const wantsBoost = (this.keysHeld['Space'] || this.virtualBoost) && this.boostFuel > 5 && throttle > 0;
 
-    // Upgrades values
+    // Upgrades values & Weather bonus
     const bladeTier = UPGRADES.bladeWidth.tiers[this.upgrades.bladeWidth - 1];
     const bladeWidth = bladeTier.statValue;
 
     const lanternTier = UPGRADES.thermalLantern.tiers[this.upgrades.thermalLantern - 1];
-    const thermalRadius = lanternTier.statValue;
+    const thermalRadius = Math.max(0, lanternTier.statValue + currentWeatherCond.warmthAuraBonus);
 
     const boostTier = UPGRADES.steamBoost.tiers[this.upgrades.steamBoost - 1];
     const boostMultiplier = boostTier.statValue;
 
     const magnetTier = UPGRADES.loveMagnet.tiers[this.upgrades.loveMagnet - 1];
-    const magnetRadius = magnetTier.statValue;
+    const magnetRadius = magnetTier.statValue * (this.currentWeather === 'aurora_solstice' ? 1.5 : 1.0);
 
     const comboTier = UPGRADES.comboTimer.tiers[this.upgrades.comboTimer - 1];
     const comboWindow = comboTier.statValue;
@@ -961,8 +1047,8 @@ export class SnowPlowGameEngine {
     }
 
     // 2. Tractor Kinematics Simulation
-    const maxSpeed = (throttle >= 0 ? 12 : 6) * (this.isBoosting ? boostMultiplier : 1.0);
-    const accelRate = (this.isBoosting ? 16 : 10);
+    const maxSpeed = (throttle >= 0 ? 12 : 6) * (this.isBoosting ? boostMultiplier : 1.0) * currentWeatherCond.speedMultiplier;
+    const accelRate = (this.isBoosting ? 16 : 10) * currentWeatherCond.speedMultiplier;
     const frictionRate = 6;
 
     if (throttle !== 0) {
@@ -1080,9 +1166,9 @@ export class SnowPlowGameEngine {
           this.particles.emitRomanticHearts(this.posX, 1.2, this.posZ, 8);
           this.cameraShakeIntensity = 0.15;
 
-          // Gain love letters on combo progression
+          // Gain love letters on combo progression with weather bonus multiplier
           const currentCombo = COMBO_LEVELS[this.comboLevel - 1];
-          const lettersGained = Math.round(5 * currentCombo.multiplier);
+          const lettersGained = Math.round(5 * currentCombo.multiplier * currentWeatherCond.comboBonusMultiplier);
           this.loveLetters += lettersGained;
           saveGameProgress({ loveLetters: this.loveLetters });
           this.triggerMessage(`${currentCombo.title}! Combo x${currentCombo.multiplier.toFixed(1)} (+${lettersGained} Letters)`);
@@ -1346,6 +1432,11 @@ export class SnowPlowGameEngine {
       unlockedPaintIds: [...this.unlockedPaintIds],
       selectedDecalId: this.selectedDecalId,
       unlockedDecalIds: [...this.unlockedDecalIds],
+      currentWeather: this.currentWeather,
+      nextWeather: this.nextWeather,
+      timeUntilForecastSec: Math.max(0, this.weatherTimer),
+      activeCeremonyId: this.activeCeremonyId,
+      activeCeremonyRemainingSec: Math.max(0, this.activeCeremonyTimer),
     });
   }
 
@@ -1385,6 +1476,11 @@ export class SnowPlowGameEngine {
       unlockedPaintIds: [...this.unlockedPaintIds],
       selectedDecalId: this.selectedDecalId,
       unlockedDecalIds: [...this.unlockedDecalIds],
+      currentWeather: this.currentWeather,
+      nextWeather: this.nextWeather,
+      timeUntilForecastSec: Math.max(0, this.weatherTimer),
+      activeCeremonyId: this.activeCeremonyId,
+      activeCeremonyRemainingSec: Math.max(0, this.activeCeremonyTimer),
     };
   }
 

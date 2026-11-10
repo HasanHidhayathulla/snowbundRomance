@@ -12,18 +12,23 @@ import {
   ChevronDown,
   ChevronUp,
   Clock,
+  CloudSnow,
   Compass,
   Gift,
   Heart,
   Landmark,
   Mail,
+  Maximize,
+  Minimize,
   Music,
+  Newspaper,
   Pause,
   Radio,
   Settings,
   Snowflake,
   Volume2,
   VolumeX,
+  Wind,
   Wrench,
   Zap,
 } from 'lucide-react';
@@ -34,14 +39,17 @@ import { VillageRadar } from './VillageRadar';
 interface GameHUDProps {
   stats: GameHUDStats;
   onOpenWorkshop: () => void;
+  onOpenBulletin: () => void;
   onOpenScrapbook: () => void;
   onOpenPhotoMode: () => void;
   onOpenDispatchRadio: () => void;
   onOpenSettings: () => void;
   onPause: () => void;
   onCycleRadio: () => void;
+  onCycleWeather: () => void;
   isMuted: boolean;
   onToggleMute: () => void;
+  hasStipendAvailable?: boolean;
   showRadar: boolean;
   onVirtualInput: (throttle: number, steer: number, boost: boolean) => void;
 }
@@ -49,21 +57,35 @@ interface GameHUDProps {
 export const GameHUD: React.FC<GameHUDProps> = ({
   stats,
   onOpenWorkshop,
+  onOpenBulletin,
   onOpenScrapbook,
   onOpenPhotoMode,
   onOpenDispatchRadio,
   onOpenSettings,
   onPause,
   onCycleRadio,
+  onCycleWeather,
   isMuted,
   onToggleMute,
+  hasStipendAvailable = false,
   showRadar,
   onVirtualInput,
 }) => {
   const [isDockCollapsed, setIsDockCollapsed] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Active combo styling
   const comboInfo = COMBO_LEVELS[stats.comboLevel - 1] || COMBO_LEVELS[0];
+
+  const handleToggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+      setIsFullscreen(true);
+    } else {
+      document.exitFullscreen().catch(() => {});
+      setIsFullscreen(false);
+    }
+  };
 
   return (
     <div className="absolute inset-0 pointer-events-none select-none flex flex-col justify-between p-4 overflow-hidden">
@@ -89,8 +111,8 @@ export const GameHUD: React.FC<GameHUDProps> = ({
             </div>
           </div>
 
-          {/* Landmarks & Gifts Mini Status */}
-          <div className="flex items-center gap-2">
+          {/* Landmarks & Gifts Mini Status & Weather Tag */}
+          <div className="flex flex-wrap items-center gap-2">
             <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-900/90 border border-slate-800 text-xs text-rose-300 font-medium">
               <Landmark className="w-3.5 h-3.5 text-rose-400" />
               <span>Couples:</span>
@@ -106,6 +128,21 @@ export const GameHUD: React.FC<GameHUDProps> = ({
                 {stats.giftsFound}/{stats.totalGifts}
               </span>
             </div>
+
+            {/* Weather Condition Badge (Clickable to cycle weather) */}
+            <button
+              onClick={onCycleWeather}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-sky-950/80 hover:bg-sky-900/80 border border-sky-800/60 text-xs text-sky-200 font-medium transition-colors cursor-pointer"
+              title="Current Weather Condition. Click to cycle forecast."
+            >
+              <CloudSnow className="w-3.5 h-3.5 text-sky-400" />
+              <span className="font-semibold text-white">{stats.weatherName.split(' ')[0]}</span>
+              {stats.weatherComboBonus > 1.0 && (
+                <span className="text-[10px] px-1 rounded bg-amber-500/20 text-amber-300 font-mono font-bold">
+                  +{Math.round((stats.weatherComboBonus - 1) * 100)}%
+                </span>
+              )}
+            </button>
           </div>
 
           {/* Active Dispatch Card (if any) */}
@@ -180,6 +217,20 @@ export const GameHUD: React.FC<GameHUDProps> = ({
             <span className="text-slate-400 font-normal">Letters</span>
           </div>
 
+          {/* Village Solstice Gazette / Community Bulletin */}
+          <button
+            onClick={onOpenBulletin}
+            className="relative flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-950/80 hover:bg-amber-900/80 border border-amber-700/60 text-xs font-semibold text-amber-200 shadow-md transition-colors cursor-pointer"
+            title="Open Solstice Gazette & Community Bulletin (B)"
+          >
+            <Newspaper className="w-4 h-4 text-amber-300" />
+            <span className="hidden sm:inline">Gazette</span>
+            <span className="font-mono text-[10px] text-amber-400">[B]</span>
+            {hasStipendAvailable && (
+              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-rose-500 ring-2 ring-slate-950 animate-ping" />
+            )}
+          </button>
+
           {/* Workshop Shortcut */}
           <button
             onClick={onOpenWorkshop}
@@ -241,6 +292,15 @@ export const GameHUD: React.FC<GameHUDProps> = ({
             title="Settings & Audio Preferences"
           >
             <Settings className="w-4 h-4 text-slate-300" />
+          </button>
+
+          {/* Fullscreen Toggle */}
+          <button
+            onClick={handleToggleFullscreen}
+            className="p-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-800 text-slate-300 shadow-md transition-colors cursor-pointer"
+            title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+          >
+            {isFullscreen ? <Minimize className="w-4 h-4 text-amber-300" /> : <Maximize className="w-4 h-4 text-slate-300" />}
           </button>
 
           {/* Mute Toggle */}
@@ -419,15 +479,15 @@ export const GameHUD: React.FC<GameHUDProps> = ({
               <span>·</span>
               <span>Space Boost</span>
               <span>·</span>
+              <span>B Gazette</span>
+              <span>·</span>
               <span>Q Dispatch</span>
               <span>·</span>
               <span>R Radio</span>
               <span>·</span>
-              <span>P Photo</span>
-              <span>·</span>
               <span>G Atelier</span>
               <span>·</span>
-              <span>L Album</span>
+              <span>P Photo</span>
             </div>
           </div>
         )}

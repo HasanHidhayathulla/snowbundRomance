@@ -2,16 +2,20 @@
  * LocalStorage Persistence and Settings Management for Snowbound Hearts
  */
 
+import type { WeatherCondition } from './constants';
+
 export type SolsticeAtmosphere = 'twilight' | 'golden' | 'aurora';
 
 export interface GameSettings {
   masterVolume: number; // 0.0 - 1.0
   musicVolume: number;  // 0.0 - 1.0
   sfxVolume: number;    // 0.0 - 1.0
+  windVolume: number;   // 0.0 - 1.0
   isMuted: boolean;
   showRadar: boolean;
   radarZoom: number;    // 1.0 = standard, 1.5 = wide
   atmosphere: SolsticeAtmosphere;
+  weatherCondition: WeatherCondition;
   radioStationId: string;
 }
 
@@ -41,6 +45,8 @@ export interface PersistentProgress {
   unlockedDecalIds: string[];
   selectedDecalId: string;
   savedPostcards?: SavedPostcard[];
+  lastDailyClaimDate?: string; // YYYY-MM-DD
+  dailyStreakCount?: number;
 }
 
 const SETTINGS_KEY = 'snowbound_hearts_settings_v1';
@@ -51,10 +57,12 @@ export const DEFAULT_SETTINGS: GameSettings = {
   masterVolume: 0.7,
   musicVolume: 0.4,
   sfxVolume: 0.8,
+  windVolume: 0.6,
   isMuted: false,
   showRadar: true,
   radarZoom: 1.0,
   atmosphere: 'twilight',
+  weatherCondition: 'gentle_flurry',
   radioStationId: 'val-classic',
 };
 
@@ -79,7 +87,58 @@ export const DEFAULT_PROGRESS: PersistentProgress = {
   selectedPaintId: 'crimson',
   unlockedDecalIds: ['heart'],
   selectedDecalId: 'heart',
+  lastDailyClaimDate: '',
+  dailyStreakCount: 0,
 };
+
+export function canClaimDailyStipend(): { canClaim: boolean; nextStreak: number; rewardLetters: number } {
+  const progress = loadGameProgress();
+  const today = new Date().toISOString().slice(0, 10);
+  const lastDate = progress.lastDailyClaimDate || '';
+
+  if (lastDate === today) {
+    return {
+      canClaim: false,
+      nextStreak: progress.dailyStreakCount || 1,
+      rewardLetters: 25 + Math.min(5, (progress.dailyStreakCount || 1) - 1) * 10,
+    };
+  }
+
+  // Check if yesterday or first time
+  let streak = progress.dailyStreakCount || 0;
+  if (lastDate) {
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    if (lastDate === yesterday) {
+      streak += 1;
+    } else {
+      streak = 1;
+    }
+  } else {
+    streak = 1;
+  }
+
+  const rewardLetters = 25 + Math.min(5, streak - 1) * 10;
+  return { canClaim: true, nextStreak: streak, rewardLetters };
+}
+
+export function claimDailyStipend(): { success: boolean; lettersGained: number; streak: number } {
+  const { canClaim, nextStreak, rewardLetters } = canClaimDailyStipend();
+  if (!canClaim) {
+    return { success: false, lettersGained: 0, streak: nextStreak };
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+  const progress = loadGameProgress();
+  const newLetters = (progress.loveLetters || 0) + rewardLetters;
+
+  saveGameProgress({
+    loveLetters: newLetters,
+    lastDailyClaimDate: today,
+    dailyStreakCount: nextStreak,
+  });
+
+  return { success: true, lettersGained: rewardLetters, streak: nextStreak };
+}
 
 export function loadGameSettings(): GameSettings {
   try {

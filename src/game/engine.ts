@@ -17,6 +17,7 @@ import {
   TRACTOR_DECALS,
   TRACTOR_PAINTS,
   UPGRADES,
+  WEATHER_CONFIGS,
   WORLD_SIZE,
   type GameState,
   type Landmark,
@@ -25,6 +26,7 @@ import {
   type SolsticeQuest,
   type TractorDecal,
   type TractorPaint,
+  type WeatherCondition,
 } from './constants';
 import {
   loadGameProgress,
@@ -85,6 +87,9 @@ export interface GameHUDStats {
   unlockedPaintIds: string[];
   selectedDecalId: string;
   unlockedDecalIds: string[];
+  weatherCondition: WeatherCondition;
+  weatherName: string;
+  weatherComboBonus: number;
 }
 
 import {
@@ -122,6 +127,8 @@ export class SnowPlowGameEngine {
   private sunLight!: THREE.DirectionalLight;
   private rimLight!: THREE.DirectionalLight;
   private atmosphere: SolsticeAtmosphere = 'twilight';
+  private weatherCondition: WeatherCondition = 'gentle_flurry';
+  private weatherTimer: number = 180; // dynamic weather cycle every 3 mins
 
   // Vehicle Physics State
   private posX: number = 0;
@@ -199,12 +206,15 @@ export class SnowPlowGameEngine {
     // Load saved settings
     const settings = loadGameSettings();
     this.atmosphere = settings.atmosphere || 'twilight';
+    this.weatherCondition = settings.weatherCondition || 'gentle_flurry';
     this.radioStationId = settings.radioStationId || 'val-classic';
     this.completedQuestIds = saved.completedQuestIds || [];
     this.unlockedPaintIds = saved.unlockedPaintIds || ['crimson'];
     this.selectedPaintId = saved.selectedPaintId || 'crimson';
     this.unlockedDecalIds = saved.unlockedDecalIds || ['heart'];
     this.selectedDecalId = saved.selectedDecalId || 'heart';
+
+    synthAudio.setWeatherWindIntensity(WEATHER_CONFIGS[this.weatherCondition]?.windAudioIntensity || 0.35);
 
     this.initWebGL();
     this.initScene();
@@ -550,6 +560,13 @@ export class SnowPlowGameEngine {
           this.cycleRadioStation();
         }
       }
+      if (e.code === 'KeyB') {
+        if (this.gameState === 'PLAYING') {
+          this.setGameState('BULLETIN');
+        } else if (this.gameState === 'BULLETIN') {
+          this.setGameState('PLAYING');
+        }
+      }
     });
 
     window.addEventListener('keyup', (e) => {
@@ -649,6 +666,28 @@ export class SnowPlowGameEngine {
         this.rimLight.intensity = 0.6;
       }
     }
+  }
+
+  public setWeatherCondition(weather: WeatherCondition) {
+    this.weatherCondition = weather;
+    const cfg = WEATHER_CONFIGS[weather] || WEATHER_CONFIGS.gentle_flurry;
+    synthAudio.setWeatherWindIntensity(cfg.windAudioIntensity);
+    saveGameSettings({ weatherCondition: weather });
+
+    // Update scene fog density based on weather
+    if (this.scene && this.scene.fog instanceof THREE.FogExp2) {
+      this.scene.fog.density = cfg.fogDensity;
+    }
+
+    this.triggerMessage(`Forecast: ${cfg.name}! ${cfg.tagline}`);
+    this.pushHUDUpdate();
+  }
+
+  public cycleWeatherCondition() {
+    const keys: WeatherCondition[] = ['calm_snow', 'gentle_flurry', 'heavy_blizzard', 'aurora_storm'];
+    const idx = keys.indexOf(this.weatherCondition);
+    const next = keys[(idx + 1) % keys.length];
+    this.setWeatherCondition(next);
   }
 
   public captureSnapshot(): string {
@@ -857,7 +896,7 @@ export class SnowPlowGameEngine {
       }
 
       this.updateCamera(dt);
-      this.particles.update(dt, this.camera.position);
+      this.particles.update(dt, this.camera.position, this.weatherCondition);
 
       this.renderer.render(this.scene, this.camera);
 
@@ -934,6 +973,15 @@ export class SnowPlowGameEngine {
 
     const wantsBoost = (this.keysHeld['Space'] || this.virtualBoost) && this.boostFuel > 5 && throttle > 0;
 
+    // Dynamic Weather cycling timer
+    this.weatherTimer -= dt;
+    if (this.weatherTimer <= 0) {
+      this.weatherTimer = 180 + Math.random() * 60;
+      this.cycleWeatherCondition();
+    }
+
+    const weatherCfg = WEATHER_CONFIGS[this.weatherCondition] || WEATHER_CONFIGS.gentle_flurry;
+
     // Upgrades values
     const bladeTier = UPGRADES.bladeWidth.tiers[this.upgrades.bladeWidth - 1];
     const bladeWidth = bladeTier.statValue;
@@ -962,8 +1010,8 @@ export class SnowPlowGameEngine {
 
     // 2. Tractor Kinematics Simulation
     const maxSpeed = (throttle >= 0 ? 12 : 6) * (this.isBoosting ? boostMultiplier : 1.0);
-    const accelRate = (this.isBoosting ? 16 : 10);
-    const frictionRate = 6;
+    const accelRate = (this.isBoosting ? 16 : 10) * weatherCfg.tractionMultiplier;
+    const frictionRate = 6 * weatherCfg.tractionMultiplier;
 
     if (throttle !== 0) {
       this.speed += throttle * accelRate * dt;
@@ -974,6 +1022,11 @@ export class SnowPlowGameEngine {
       } else if (this.speed < 0) {
         this.speed = Math.min(0, this.speed + frictionRate * dt);
       }
+    }
+
+    // Weather wind drift influence on tractor steering
+    if (Math.abs(weatherCfg.windDriftX) > 1.5 && Math.abs(this.speed) > 1) {
+      this.heading += (weatherCfg.windDriftX > 0 ? 0.05 : -0.05) * dt * (this.speed / 12);
     }
 
     // Steering with speed sensitivity
@@ -1082,7 +1135,7 @@ export class SnowPlowGameEngine {
 
           // Gain love letters on combo progression
           const currentCombo = COMBO_LEVELS[this.comboLevel - 1];
-          const lettersGained = Math.round(5 * currentCombo.multiplier);
+          const lettersGained = Math.round(5 * currentCombo.multiplier * weatherCfg.comboBonusMultiplier);
           this.loveLetters += lettersGained;
           saveGameProgress({ loveLetters: this.loveLetters });
           this.triggerMessage(`${currentCombo.title}! Combo x${currentCombo.multiplier.toFixed(1)} (+${lettersGained} Letters)`);
@@ -1314,6 +1367,7 @@ export class SnowPlowGameEngine {
     const collectedGifts = this.gifts.filter((g) => g.collected).length;
 
     const station = RADIO_STATIONS.find((s) => s.id === this.radioStationId) || RADIO_STATIONS[0];
+    const weatherCfg = WEATHER_CONFIGS[this.weatherCondition] || WEATHER_CONFIGS.gentle_flurry;
 
     this.onHUDUpdate({
       gameState: this.gameState,
@@ -1346,6 +1400,9 @@ export class SnowPlowGameEngine {
       unlockedPaintIds: [...this.unlockedPaintIds],
       selectedDecalId: this.selectedDecalId,
       unlockedDecalIds: [...this.unlockedDecalIds],
+      weatherCondition: this.weatherCondition,
+      weatherName: weatherCfg.name,
+      weatherComboBonus: weatherCfg.comboBonusMultiplier,
     });
   }
 
@@ -1354,6 +1411,7 @@ export class SnowPlowGameEngine {
     const comboTier = UPGRADES.comboTimer.tiers[this.upgrades.comboTimer - 1];
     const comboWindow = comboTier.statValue;
     const station = RADIO_STATIONS.find((s) => s.id === this.radioStationId) || RADIO_STATIONS[0];
+    const weatherCfg = WEATHER_CONFIGS[this.weatherCondition] || WEATHER_CONFIGS.gentle_flurry;
     return {
       gameState: this.gameState,
       snowClearedPercent: this.snowClearedPercent,
@@ -1385,6 +1443,9 @@ export class SnowPlowGameEngine {
       unlockedPaintIds: [...this.unlockedPaintIds],
       selectedDecalId: this.selectedDecalId,
       unlockedDecalIds: [...this.unlockedDecalIds],
+      weatherCondition: this.weatherCondition,
+      weatherName: weatherCfg.name,
+      weatherComboBonus: weatherCfg.comboBonusMultiplier,
     };
   }
 

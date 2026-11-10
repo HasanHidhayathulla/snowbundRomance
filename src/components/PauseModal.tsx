@@ -3,12 +3,13 @@
  */
 
 import React from 'react';
-import { BookOpen, Camera, Play, Radio, RotateCcw, Settings, Volume2, VolumeX, Wrench } from 'lucide-react';
+import { BookOpen, Camera, Newspaper, Play, Radio, RotateCcw, Settings, Volume2, VolumeX, Wrench } from 'lucide-react';
 
 interface PauseModalProps {
   onResume: () => void;
   onRestart: () => void;
   onOpenWorkshop: () => void;
+  onOpenBulletin: () => void;
   onOpenScrapbook: () => void;
   onOpenPhotoMode: () => void;
   onOpenDispatchRadio: () => void;
@@ -23,6 +24,7 @@ export const PauseModal: React.FC<PauseModalProps> = ({
   onResume,
   onRestart,
   onOpenWorkshop,
+  onOpenBulletin,
   onOpenScrapbook,
   onOpenPhotoMode,
   onOpenDispatchRadio,
@@ -48,6 +50,14 @@ export const PauseModal: React.FC<PauseModalProps> = ({
           >
             <Play className="w-4 h-4 fill-white" />
             <span>Resume Plowing (Esc)</span>
+          </button>
+
+          <button
+            onClick={onOpenBulletin}
+            className="w-full py-2.5 px-4 rounded-xl bg-amber-950/70 hover:bg-amber-900/80 text-amber-200 font-medium flex items-center justify-center gap-2 border border-amber-800/60 transition-colors cursor-pointer"
+          >
+            <Newspaper className="w-4 h-4 text-amber-400" />
+            <span>Solstice Gazette & Bulletin (B)</span>
           </button>
 
           <button
@@ -121,7 +131,7 @@ export const PauseModal: React.FC<PauseModalProps> = ({
         {/* Controls Quick Reference */}
         <div className="p-3 rounded-lg bg-slate-950/60 border border-slate-800 text-[11px] text-slate-400 leading-relaxed text-center">
           <p><span className="text-slate-200 font-mono font-semibold">WASD / Arrows</span> steer · <span className="text-slate-200 font-mono font-semibold">Space</span> Turbo</p>
-          <p><span className="text-slate-200 font-mono font-semibold">Q</span> Dispatch · <span className="text-slate-200 font-mono font-semibold">R</span> Radio · <span className="text-slate-200 font-mono font-semibold">G</span> Atelier</p>
+          <p><span className="text-slate-200 font-mono font-semibold">B</span> Gazette · <span className="text-slate-200 font-mono font-semibold">Q</span> Dispatch · <span className="text-slate-200 font-mono font-semibold">R</span> Radio · <span className="text-slate-200 font-mono font-semibold">G</span> Atelier</p>
           <p>Maintain continuous plowing to build <span className="text-rose-400 font-semibold">True Love Combos</span></p>
         </div>
       </div>

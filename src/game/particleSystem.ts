@@ -5,6 +5,7 @@
  */
 
 import * as THREE from 'three';
+import { WEATHER_CONFIGS, type WeatherCondition } from './constants';
 
 interface Particle {
   active: boolean;
@@ -248,7 +249,8 @@ export class ParticleSystem {
   /**
    * Update particle positions per frame
    */
-  public update(dt: number, cameraPos: THREE.Vector3) {
+  public update(dt: number, cameraPos: THREE.Vector3, weather: WeatherCondition = 'gentle_flurry') {
+    const weatherCfg = WEATHER_CONFIGS[weather] || WEATHER_CONFIGS.gentle_flurry;
     const posAttr = this.pointsMesh.geometry.getAttribute('position') as THREE.BufferAttribute;
     const colAttr = this.pointsMesh.geometry.getAttribute('color') as THREE.BufferAttribute;
 
@@ -288,29 +290,45 @@ export class ParticleSystem {
     posAttr.needsUpdate = true;
     colAttr.needsUpdate = true;
 
-    // 2. Update ambient snow centered around camera
+    // 2. Update ambient snow centered around camera with dynamic weather wind & speed
     const snowAttr = this.snowMesh.geometry.getAttribute('position') as THREE.BufferAttribute;
+    const speedMult = weatherCfg.snowFallSpeed;
+    const windDrift = weatherCfg.windDriftX;
+
     for (let i = 0; i < this.maxSnowflakes; i++) {
-      let sx = this.snowPositions[i * 3 + 0] + this.snowVelocities[i * 3 + 0] * dt;
-      let sy = this.snowPositions[i * 3 + 1] + this.snowVelocities[i * 3 + 1] * dt;
-      let sz = this.snowPositions[i * 3 + 2] + this.snowVelocities[i * 3 + 2] * dt;
+      let sx = this.snowPositions[i * 3 + 0] + (this.snowVelocities[i * 3 + 0] + windDrift) * dt;
+      let sy = this.snowPositions[i * 3 + 1] + this.snowVelocities[i * 3 + 1] * speedMult * dt;
+      let sz = this.snowPositions[i * 3 + 2] + (this.snowVelocities[i * 3 + 2] + windDrift * 0.4) * dt;
 
       // Wrap snow within camera volume
       if (sy < 0.2) {
-        sy = 22 + Math.random() * 4;
-        sx = cameraPos.x + (Math.random() - 0.5) * 70;
-        sz = cameraPos.z + (Math.random() - 0.5) * 70;
+        sy = 24 + Math.random() * 4;
+        sx = cameraPos.x + (Math.random() - 0.5) * 80 - windDrift * 2;
+        sz = cameraPos.z + (Math.random() - 0.5) * 80;
       }
-      if (Math.abs(sx - cameraPos.x) > 40) {
-        sx = cameraPos.x + (Math.random() - 0.5) * 40;
+      if (Math.abs(sx - cameraPos.x) > 45) {
+        sx = cameraPos.x - Math.sign(sx - cameraPos.x) * 40;
       }
-      if (Math.abs(sz - cameraPos.z) > 40) {
-        sz = cameraPos.z + (Math.random() - 0.5) * 40;
+      if (Math.abs(sz - cameraPos.z) > 45) {
+        sz = cameraPos.z - Math.sign(sz - cameraPos.z) * 40;
       }
 
       this.snowPositions[i * 3 + 0] = sx;
       this.snowPositions[i * 3 + 1] = sy;
       this.snowPositions[i * 3 + 2] = sz;
+    }
+
+    // Dynamic snowflake size adjustments based on blizzard thickness
+    const snowMat = this.snowMesh.material as THREE.PointsMaterial;
+    if (weather === 'heavy_blizzard') {
+      snowMat.size = 0.38;
+      snowMat.opacity = 0.95;
+    } else if (weather === 'aurora_storm') {
+      snowMat.size = 0.28;
+      snowMat.opacity = 0.9;
+    } else {
+      snowMat.size = 0.22;
+      snowMat.opacity = 0.8;
     }
 
     snowAttr.needsUpdate = true;

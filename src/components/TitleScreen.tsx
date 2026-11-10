@@ -5,7 +5,7 @@
  */
 
 import React from 'react';
-import { BookOpen, Heart, Radio, Settings, Sparkles, Volume2, VolumeX } from 'lucide-react';
+import { BookOpen, Heart, Newspaper, Radio, Settings, Sparkles, Volume2, VolumeX } from 'lucide-react';
 import { synthAudio } from '../audio/synthAudio';
 
 interface TitleScreenProps {
@@ -13,6 +13,7 @@ interface TitleScreenProps {
   isMuted: boolean;
   onToggleMute: () => void;
   onOpenDispatchRadio?: () => void;
+  onOpenBulletin?: () => void;
   onOpenScrapbook: () => void;
   onOpenSettings: () => void;
 }
@@ -22,6 +23,7 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
   isMuted,
   onToggleMute,
   onOpenDispatchRadio,
+  onOpenBulletin,
   onOpenScrapbook,
   onOpenSettings,
 }) => {
@@ -35,6 +37,16 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
+          {onOpenBulletin && (
+            <button
+              onClick={onOpenBulletin}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-slate-900/80 border border-amber-700/60 hover:bg-slate-800 text-xs text-amber-300 transition-colors cursor-pointer"
+            >
+              <Newspaper className="w-3.5 h-3.5 text-amber-400" />
+              <span>Gazette</span>
+            </button>
+          )}
+
           {onOpenDispatchRadio && (
             <button
               onClick={onOpenDispatchRadio}
@@ -154,6 +166,8 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
         <span className="font-mono text-slate-200 font-semibold">WASD / Arrows</span> Move
         <span className="mx-2 text-slate-600">·</span>
         <span className="font-mono text-slate-200 font-semibold">Space</span> Boost
+        <span className="mx-2 text-slate-600">·</span>
+        <span className="font-mono text-slate-200 font-semibold">B</span> Gazette
         <span className="mx-2 text-slate-600">·</span>
         <span className="font-mono text-slate-200 font-semibold">Q</span> Dispatch
         <span className="mx-2 text-slate-600">·</span>

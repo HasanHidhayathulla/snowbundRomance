@@ -17,6 +17,7 @@ import {
   Upload,
   Volume2,
   VolumeX,
+  Wind,
   X,
   Zap,
 } from 'lucide-react';
@@ -162,6 +163,28 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               />
             </div>
 
+            {/* Blizzard Wind Howl Volume */}
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center justify-between text-xs">
+                <span className="flex items-center gap-1.5 font-medium text-slate-200">
+                  <Wind className="w-4 h-4 text-cyan-400" />
+                  Blizzard Wind & Gale Synth
+                </span>
+                <span className="font-mono text-slate-400">
+                  {Math.round(settings.windVolume * 100)}%
+                </span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.05"
+                value={settings.windVolume}
+                onChange={(e) => onUpdateSettings({ windVolume: parseFloat(e.target.value) })}
+                className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-500"
+              />
+            </div>
+
             {/* Ambient Music Volume */}
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center justify-between text-xs">
@@ -287,6 +310,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <div className="p-2.5 rounded-xl bg-slate-800/70 border border-slate-700/50 flex items-center justify-between">
                 <span className="text-slate-300">Steam Boost Turbo</span>
                 <kbd className="px-2 py-0.5 rounded bg-slate-900 border border-slate-700 text-amber-300 font-mono text-[11px]">Space</kbd>
+              </div>
+              <div className="p-2.5 rounded-xl bg-slate-800/70 border border-slate-700/50 flex items-center justify-between">
+                <span className="text-slate-300">Solstice Gazette & Bulletin</span>
+                <kbd className="px-2 py-0.5 rounded bg-slate-900 border border-slate-700 text-amber-300 font-mono text-[11px]">B</kbd>
               </div>
               <div className="p-2.5 rounded-xl bg-slate-800/70 border border-slate-700/50 flex items-center justify-between">
                 <span className="text-slate-300">Postcard Photo Mode</span>

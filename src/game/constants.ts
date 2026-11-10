@@ -2,7 +2,117 @@
  * Game constants, upgrade definitions, collectibles, and balance parameters
  */
 
-export type GameState = 'TITLE' | 'PLAYING' | 'PAUSED' | 'GARAGE' | 'VICTORY' | 'SCRAPBOOK' | 'SETTINGS' | 'PHOTO' | 'DISPATCH_RADIO';
+export type GameState = 'TITLE' | 'PLAYING' | 'PAUSED' | 'GARAGE' | 'VICTORY' | 'SCRAPBOOK' | 'SETTINGS' | 'PHOTO' | 'DISPATCH_RADIO' | 'BULLETIN';
+
+export type WeatherCondition = 'calm_snow' | 'gentle_flurry' | 'heavy_blizzard' | 'aurora_storm';
+
+export interface WeatherConfig {
+  id: WeatherCondition;
+  name: string;
+  tagline: string;
+  snowFallSpeed: number;
+  windDriftX: number;
+  windAudioIntensity: number; // 0 to 1
+  fogDensity: number;
+  tractionMultiplier: number;
+  comboBonusMultiplier: number;
+  colorHex: string;
+}
+
+export const WEATHER_CONFIGS: Record<WeatherCondition, WeatherConfig> = {
+  calm_snow: {
+    id: 'calm_snow',
+    name: 'Gentle Hearth Flurry',
+    tagline: 'Quiet winter stillness with soft lazy snowflakes drifting past the chalets.',
+    snowFallSpeed: 1.2,
+    windDriftX: 0.2,
+    windAudioIntensity: 0.05,
+    fogDensity: 0.012,
+    tractionMultiplier: 1.0,
+    comboBonusMultiplier: 1.0,
+    colorHex: '#93c5fd',
+  },
+  gentle_flurry: {
+    id: 'gentle_flurry',
+    name: 'Whistling Frost Breeze',
+    tagline: 'Crisp alpine breeze picking up speed across the valley rooftops.',
+    snowFallSpeed: 2.2,
+    windDriftX: 1.4,
+    windAudioIntensity: 0.35,
+    fogDensity: 0.016,
+    tractionMultiplier: 0.95,
+    comboBonusMultiplier: 1.15,
+    colorHex: '#38bdf8',
+  },
+  heavy_blizzard: {
+    id: 'heavy_blizzard',
+    name: 'Valley Whiteout Blizzard',
+    tagline: 'Fierce winter gale raging through the passes! High risk, x1.4 combo reward.',
+    snowFallSpeed: 4.5,
+    windDriftX: 3.8,
+    windAudioIntensity: 0.85,
+    fogDensity: 0.026,
+    tractionMultiplier: 0.85,
+    comboBonusMultiplier: 1.4,
+    colorHex: '#fb7185',
+  },
+  aurora_storm: {
+    id: 'aurora_storm',
+    name: 'Celestial Aurora Squall',
+    tagline: 'Dancing emerald ion curtains and sparkling stardust powder.',
+    snowFallSpeed: 1.8,
+    windDriftX: 0.8,
+    windAudioIntensity: 0.2,
+    fogDensity: 0.015,
+    tractionMultiplier: 1.05,
+    comboBonusMultiplier: 1.25,
+    colorHex: '#34d399',
+  },
+};
+
+export interface GazetteArticle {
+  id: string;
+  category: 'Weather' | 'Romance' | 'Gossip' | 'Notice';
+  headline: string;
+  author: string;
+  content: string;
+  timestamp: string;
+}
+
+export const GAZETTE_EDITION_ARTICLES: GazetteArticle[] = [
+  {
+    id: 'art-1',
+    category: 'Weather',
+    headline: 'Grand Solstice Blizzard Intensifies Over North Pass',
+    author: 'Chief Meteorologist Gale Winters',
+    content: 'Valentine Valley faces one of the deepest powdery snowfalls in forty winters! The town council requests all citizens to stay indoors near roaring hearths while our brave Heartplow operators clear the thoroughfares.',
+    timestamp: 'Solstice Dawn Edition',
+  },
+  {
+    id: 'art-2',
+    category: 'Romance',
+    headline: 'Bakery Julien Prepares Secret Solstice Cinnamon Tarts for Elodie',
+    author: 'Madame Beatrice, Village Chronicler',
+    content: 'Julien was spotted kneading sourdough infused with crushed cardamom and pure vanilla sugar. Whispers in the square suggest he plans to present the batch atop Lover’s Bridge once the snowdrifts are swept.',
+    timestamp: 'Page 3 Society Note',
+  },
+  {
+    id: 'art-3',
+    category: 'Gossip',
+    headline: 'Mysterious Vintage Music Box Believed Buried Under North Pines',
+    author: 'Grandma Clara',
+    content: '“It holds a melody passed down through three generations of mountain waltzers,” Clara remarked. The finder will be blessed with warmth and sweet Solstice memories for the rest of winter.',
+    timestamp: 'Lost & Found Notice',
+  },
+  {
+    id: 'art-4',
+    category: 'Notice',
+    headline: 'Midnight Clocktower Chimes Ring Upon Solstice Eve',
+    author: 'Archivist Noel',
+    content: 'Villagers are reminded that when the starlight clock strikes twelve, couples kissing beneath the grand town square evergreen receive eternal good fortune. Clear the road so the festive bell-ringer may ascend!',
+    timestamp: 'Town Hall Bulletin',
+  },
+];
 
 export interface SolsticeQuest {
   id: string;

@@ -14,9 +14,11 @@ import { SettingsModal } from './components/SettingsModal';
 import { ShopModal } from './components/ShopModal';
 import { TitleScreen } from './components/TitleScreen';
 import { VictoryModal } from './components/VictoryModal';
-import { ACHIEVEMENTS, LANDMARKS, ROMANTIC_GIFTS } from './game/constants';
+import { VillageBulletinModal } from './components/VillageBulletinModal';
+import { ACHIEVEMENTS, LANDMARKS, ROMANTIC_GIFTS, type WeatherCondition } from './game/constants';
 import { SnowPlowGameEngine, type GameHUDStats } from './game/engine';
 import {
+  canClaimDailyStipend,
   clearGameData,
   loadGameProgress,
   loadGameSettings,
@@ -73,6 +75,9 @@ export default function App() {
     unlockedPaintIds: ['crimson'],
     selectedDecalId: 'heart',
     unlockedDecalIds: ['heart'],
+    weatherCondition: settings.weatherCondition || 'gentle_flurry',
+    weatherName: 'Whistling Frost Breeze',
+    weatherComboBonus: 1.15,
   });
 
   useEffect(() => {
@@ -104,6 +109,7 @@ export default function App() {
   useEffect(() => {
     synthAudio.setMasterVolume(settings.masterVolume);
     synthAudio.setMusicVolume(settings.musicVolume);
+    synthAudio.setWindVolume(settings.windVolume ?? 0.6);
     synthAudio.setSfxVolume(settings.sfxVolume);
     synthAudio.setMute(settings.isMuted);
   }, []);
@@ -115,6 +121,7 @@ export default function App() {
     if (newVals.masterVolume !== undefined) synthAudio.setMasterVolume(newVals.masterVolume);
     if (newVals.musicVolume !== undefined) synthAudio.setMusicVolume(newVals.musicVolume);
     if (newVals.sfxVolume !== undefined) synthAudio.setSfxVolume(newVals.sfxVolume);
+    if (newVals.windVolume !== undefined) synthAudio.setWindVolume(newVals.windVolume);
     if (newVals.isMuted !== undefined) synthAudio.setMute(newVals.isMuted);
     if (newVals.radioStationId !== undefined && engineRef.current) {
       engineRef.current.setRadioStation(newVals.radioStationId);
@@ -122,6 +129,34 @@ export default function App() {
     if (newVals.atmosphere !== undefined && engineRef.current) {
       engineRef.current.applyAtmosphere(newVals.atmosphere);
     }
+    if (newVals.weatherCondition !== undefined && engineRef.current) {
+      engineRef.current.setWeatherCondition(newVals.weatherCondition);
+    }
+  };
+
+  const handleOpenBulletin = () => {
+    if (engineRef.current) {
+      engineRef.current.setGameState('BULLETIN');
+    }
+  };
+
+  const handleSelectWeather = (weather: WeatherCondition) => {
+    if (engineRef.current) {
+      engineRef.current.setWeatherCondition(weather);
+    }
+  };
+
+  const handleCycleWeather = () => {
+    if (engineRef.current) {
+      engineRef.current.cycleWeatherCondition();
+    }
+  };
+
+  const handleClaimStipend = (lettersGained: number) => {
+    setStats((prev) => ({
+      ...prev,
+      loveLetters: prev.loveLetters + lettersGained,
+    }));
   };
 
   const handleOpenDispatchRadio = () => {
@@ -260,6 +295,7 @@ export default function App() {
           onStart={handleStartGame}
           isMuted={settings.isMuted}
           onToggleMute={handleToggleMute}
+          onOpenBulletin={handleOpenBulletin}
           onOpenDispatchRadio={handleOpenDispatchRadio}
           onOpenScrapbook={handleOpenScrapbook}
           onOpenSettings={handleOpenSettings}
@@ -271,16 +307,33 @@ export default function App() {
         <GameHUD
           stats={stats}
           onOpenWorkshop={handleOpenWorkshop}
+          onOpenBulletin={handleOpenBulletin}
           onOpenScrapbook={handleOpenScrapbook}
           onOpenPhotoMode={handleOpenPhotoMode}
           onOpenDispatchRadio={handleOpenDispatchRadio}
           onOpenSettings={handleOpenSettings}
           onPause={handlePause}
           onCycleRadio={handleCycleRadio}
+          onCycleWeather={handleCycleWeather}
           isMuted={settings.isMuted}
           onToggleMute={handleToggleMute}
+          hasStipendAvailable={canClaimDailyStipend().canClaim}
           showRadar={settings.showRadar}
           onVirtualInput={handleVirtualInput}
+        />
+      )}
+
+      {/* 3.2 Solstice Gazette & Community Bulletin Modal */}
+      {stats.gameState === 'BULLETIN' && (
+        <VillageBulletinModal
+          currentWeather={stats.weatherCondition}
+          snowClearedPercent={stats.snowClearedPercent}
+          loveLetters={stats.loveLetters}
+          landmarksCleared={stats.landmarksCleared}
+          totalLandmarks={stats.totalLandmarks}
+          onSelectWeather={handleSelectWeather}
+          onClaimStipend={handleClaimStipend}
+          onClose={handleResume}
         />
       )}
 
@@ -320,6 +373,7 @@ export default function App() {
           onResume={handleResume}
           onRestart={handleRestart}
           onOpenWorkshop={handleOpenWorkshop}
+          onOpenBulletin={handleOpenBulletin}
           onOpenDispatchRadio={handleOpenDispatchRadio}
           onOpenScrapbook={handleOpenScrapbook}
           onOpenPhotoMode={handleOpenPhotoMode}

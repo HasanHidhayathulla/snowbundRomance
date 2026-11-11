@@ -14,7 +14,8 @@ import { SettingsModal } from './components/SettingsModal';
 import { ShopModal } from './components/ShopModal';
 import { TitleScreen } from './components/TitleScreen';
 import { VictoryModal } from './components/VictoryModal';
-import { ACHIEVEMENTS, LANDMARKS, ROMANTIC_GIFTS } from './game/constants';
+import { WinterPassModal } from './components/WinterPassModal';
+import { ACHIEVEMENTS, LANDMARKS, ROMANTIC_GIFTS, WEATHER_CONDITIONS } from './game/constants';
 import { SnowPlowGameEngine, type GameHUDStats } from './game/engine';
 import {
   clearGameData,
@@ -73,6 +74,12 @@ export default function App() {
     unlockedPaintIds: ['crimson'],
     selectedDecalId: 'heart',
     unlockedDecalIds: ['heart'],
+    weather: WEATHER_CONDITIONS.gentle_flurry,
+    weatherCycleTimeLeft: 75,
+    winterPassXp: 0,
+    winterPassLevel: 0,
+    claimedPassTierIds: [],
+    unclaimedPassRewardsCount: 0,
   });
 
   useEffect(() => {
@@ -127,6 +134,18 @@ export default function App() {
   const handleOpenDispatchRadio = () => {
     if (engineRef.current) {
       engineRef.current.setGameState('DISPATCH_RADIO');
+    }
+  };
+
+  const handleOpenWinterPass = () => {
+    if (engineRef.current) {
+      engineRef.current.setGameState('WINTER_PASS');
+    }
+  };
+
+  const handleClaimPassTierReward = (tierLevel: number) => {
+    if (engineRef.current) {
+      engineRef.current.claimPassTierReward(tierLevel);
     }
   };
 
@@ -261,6 +280,7 @@ export default function App() {
           isMuted={settings.isMuted}
           onToggleMute={handleToggleMute}
           onOpenDispatchRadio={handleOpenDispatchRadio}
+          onOpenWinterPass={handleOpenWinterPass}
           onOpenScrapbook={handleOpenScrapbook}
           onOpenSettings={handleOpenSettings}
         />
@@ -274,6 +294,7 @@ export default function App() {
           onOpenScrapbook={handleOpenScrapbook}
           onOpenPhotoMode={handleOpenPhotoMode}
           onOpenDispatchRadio={handleOpenDispatchRadio}
+          onOpenWinterPass={handleOpenWinterPass}
           onOpenSettings={handleOpenSettings}
           onPause={handlePause}
           onCycleRadio={handleCycleRadio}
@@ -321,6 +342,7 @@ export default function App() {
           onRestart={handleRestart}
           onOpenWorkshop={handleOpenWorkshop}
           onOpenDispatchRadio={handleOpenDispatchRadio}
+          onOpenWinterPass={handleOpenWinterPass}
           onOpenScrapbook={handleOpenScrapbook}
           onOpenPhotoMode={handleOpenPhotoMode}
           onOpenSettings={handleOpenSettings}
@@ -338,6 +360,16 @@ export default function App() {
           onCapture={handleCapturePostcard}
           onClose={handleResume}
           onOpenScrapbook={handleOpenScrapbook}
+        />
+      )}
+
+      {/* 3.8 Solstice Winter Pass Modal */}
+      {stats.gameState === 'WINTER_PASS' && (
+        <WinterPassModal
+          winterPassXp={stats.winterPassXp}
+          claimedPassTierIds={stats.claimedPassTierIds}
+          onClaimTierReward={handleClaimPassTierReward}
+          onClose={handleResume}
         />
       )}
 

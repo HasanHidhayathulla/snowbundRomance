@@ -30,6 +30,11 @@ class SynthAudioEngine {
   private snowNoiseFilter: BiquadFilterNode | null = null;
   private noiseBuffer: AudioBuffer | null = null;
 
+  // Dynamic procedural blizzard howling wind
+  private windNoiseNode: AudioBufferSourceNode | null = null;
+  private windNoiseGain: GainNode | null = null;
+  private windNoiseFilter: BiquadFilterNode | null = null;
+
   // Music state & Radio stations
   private musicIntervalId: number | null = null;
   private chordIndex: number = 0;
@@ -65,6 +70,9 @@ class SynthAudioEngine {
 
       // Setup continuous snow plowing crunch
       this.setupSnowNoise();
+
+      // Setup dynamic howling wind for blizzard weather
+      this.setupWindSynth();
 
       // Start ambient romantic synth pads
       if (this.isMusicEnabled) {
@@ -137,6 +145,41 @@ class SynthAudioEngine {
     this.snowNoiseGain.connect(this.sfxGain);
 
     this.snowNoiseNode.start();
+  }
+
+  private setupWindSynth() {
+    if (!this.ctx || !this.sfxGain || !this.noiseBuffer) return;
+
+    this.windNoiseNode = this.ctx.createBufferSource();
+    this.windNoiseNode.buffer = this.noiseBuffer;
+    this.windNoiseNode.loop = true;
+
+    this.windNoiseFilter = this.ctx.createBiquadFilter();
+    this.windNoiseFilter.type = 'bandpass';
+    this.windNoiseFilter.frequency.setValueAtTime(350, this.ctx.currentTime);
+    this.windNoiseFilter.Q.setValueAtTime(3.0, this.ctx.currentTime);
+
+    this.windNoiseGain = this.ctx.createGain();
+    this.windNoiseGain.gain.setValueAtTime(0, this.ctx.currentTime);
+
+    this.windNoiseNode.connect(this.windNoiseFilter);
+    this.windNoiseFilter.connect(this.windNoiseGain);
+    this.windNoiseGain.connect(this.sfxGain);
+
+    this.windNoiseNode.start();
+  }
+
+  /**
+   * Update continuous weather atmospheric audio (wind howl intensity)
+   */
+  public updateWeatherAudio(windIntensity: number) {
+    if (!this.ctx || !this.windNoiseGain || !this.windNoiseFilter || !this.isSfxEnabled) return;
+    const t = this.ctx.currentTime;
+    const targetGain = Math.max(0, Math.min(0.24, windIntensity * 0.18));
+    const targetFreq = 260 + windIntensity * 400 + Math.sin(t * 1.5) * 80;
+
+    this.windNoiseGain.gain.setTargetAtTime(targetGain, t, 0.2);
+    this.windNoiseFilter.frequency.setTargetAtTime(targetFreq, t, 0.25);
   }
 
   /**
@@ -535,6 +578,53 @@ class SynthAudioEngine {
 
     osc.start(t);
     osc.stop(t + 0.07);
+  }
+
+  /**
+   * Winter Pass Tier Level-Up & Claim Chimes
+   */
+  public playPassClaimSound() {
+    if (!this.ctx || !this.sfxGain || !this.isSfxEnabled) return;
+    const t = this.ctx.currentTime;
+    const chords = [587.33, 739.99, 880.0, 1174.66]; // D5, F#5, A5, D6
+
+    chords.forEach((freq, idx) => {
+      const noteTime = t + idx * 0.07;
+      const osc = this.ctx!.createOscillator();
+      const gain = this.ctx!.createGain();
+
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, noteTime);
+
+      gain.gain.setValueAtTime(0.18, noteTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, noteTime + 0.45);
+
+      osc.connect(gain);
+      gain.connect(this.sfxGain!);
+
+      osc.start(noteTime);
+      osc.stop(noteTime + 0.48);
+    });
+  }
+
+  public playBlizzardWarningSound() {
+    if (!this.ctx || !this.sfxGain || !this.isSfxEnabled) return;
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(220, t);
+    osc.frequency.linearRampToValueAtTime(160, t + 0.35);
+
+    gain.gain.setValueAtTime(0.12, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
+
+    osc.connect(gain);
+    gain.connect(this.sfxGain);
+
+    osc.start(t);
+    osc.stop(t + 0.42);
   }
 
   /**

@@ -40,6 +40,8 @@ export interface PersistentProgress {
   selectedPaintId: string;
   unlockedDecalIds: string[];
   selectedDecalId: string;
+  winterPassXp: number;
+  claimedPassTierIds: number[];
   savedPostcards?: SavedPostcard[];
 }
 
@@ -79,6 +81,8 @@ export const DEFAULT_PROGRESS: PersistentProgress = {
   selectedPaintId: 'crimson',
   unlockedDecalIds: ['heart'],
   selectedDecalId: 'heart',
+  winterPassXp: 0,
+  claimedPassTierIds: [],
 };
 
 export function loadGameSettings(): GameSettings {

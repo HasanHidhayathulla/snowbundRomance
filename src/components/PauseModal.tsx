@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { BookOpen, Camera, Play, Radio, RotateCcw, Settings, Volume2, VolumeX, Wrench } from 'lucide-react';
+import { Award, BookOpen, Camera, Play, Radio, RotateCcw, Settings, Volume2, VolumeX, Wrench } from 'lucide-react';
 
 interface PauseModalProps {
   onResume: () => void;
@@ -12,6 +12,7 @@ interface PauseModalProps {
   onOpenScrapbook: () => void;
   onOpenPhotoMode: () => void;
   onOpenDispatchRadio: () => void;
+  onOpenWinterPass: () => void;
   onOpenSettings: () => void;
   isMuted: boolean;
   onToggleMute: () => void;
@@ -26,6 +27,7 @@ export const PauseModal: React.FC<PauseModalProps> = ({
   onOpenScrapbook,
   onOpenPhotoMode,
   onOpenDispatchRadio,
+  onOpenWinterPass,
   onOpenSettings,
   isMuted,
   onToggleMute,
@@ -48,6 +50,14 @@ export const PauseModal: React.FC<PauseModalProps> = ({
           >
             <Play className="w-4 h-4 fill-white" />
             <span>Resume Plowing (Esc)</span>
+          </button>
+
+          <button
+            onClick={onOpenWinterPass}
+            className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-amber-950/70 to-yellow-950/80 hover:from-amber-900/80 hover:to-yellow-900/80 text-amber-200 font-medium flex items-center justify-center gap-2 border border-amber-800/60 transition-colors cursor-pointer"
+          >
+            <Award className="w-4 h-4 text-amber-400" />
+            <span>Solstice Winter Pass & Track (B)</span>
           </button>
 
           <button

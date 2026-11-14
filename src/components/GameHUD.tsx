@@ -25,6 +25,7 @@ import {
   Radio,
   Settings,
   Snowflake,
+  Sun,
   Sparkles,
   Volume2,
   VolumeX,
@@ -32,7 +33,7 @@ import {
   Wrench,
   Zap,
 } from 'lucide-react';
-import { COMBO_LEVELS } from '../game/constants';
+import { COMBO_LEVELS, WEATHER_CONDITIONS } from '../game/constants';
 import type { GameHUDStats } from '../game/engine';
 import { VillageRadar } from './VillageRadar';
 
@@ -42,6 +43,7 @@ interface GameHUDProps {
   onOpenScrapbook: () => void;
   onOpenPhotoMode: () => void;
   onOpenDispatchRadio: () => void;
+  onOpenObservatory: () => void;
   onOpenWinterPass: () => void;
   onOpenSettings: () => void;
   onPause: () => void;
@@ -58,6 +60,7 @@ export const GameHUD: React.FC<GameHUDProps> = ({
   onOpenScrapbook,
   onOpenPhotoMode,
   onOpenDispatchRadio,
+  onOpenObservatory,
   onOpenWinterPass,
   onOpenSettings,
   onPause,
@@ -71,6 +74,21 @@ export const GameHUD: React.FC<GameHUDProps> = ({
 
   // Active combo styling
   const comboInfo = COMBO_LEVELS[stats.comboLevel - 1] || COMBO_LEVELS[0];
+  const weatherCond = WEATHER_CONDITIONS[stats.currentWeather] || WEATHER_CONDITIONS.calm_snow;
+
+  const renderWeatherIcon = () => {
+    switch (stats.currentWeather) {
+      case 'golden_dawn':
+        return <Sun className="w-3.5 h-3.5 text-amber-400" />;
+      case 'blizzard':
+        return <Wind className="w-3.5 h-3.5 text-indigo-400 animate-pulse" />;
+      case 'aurora_solstice':
+        return <Compass className="w-3.5 h-3.5 text-emerald-400 animate-spin" />;
+      case 'calm_snow':
+      default:
+        return <CloudSnow className="w-3.5 h-3.5 text-sky-400" />;
+    }
+  };
 
   return (
     <div className="absolute inset-0 pointer-events-none select-none flex flex-col justify-between p-4 overflow-hidden">
@@ -138,6 +156,24 @@ export const GameHUD: React.FC<GameHUDProps> = ({
               </span>
             </div>
           </div>
+
+          {/* Weather Status Pill & Observatory Shortcut */}
+          <button
+            onClick={onOpenObservatory}
+            className="flex items-center justify-between gap-2.5 px-3 py-1.5 rounded-xl bg-slate-900/90 hover:bg-slate-800/90 border border-slate-800 hover:border-slate-700 text-xs shadow-md transition-colors cursor-pointer"
+            title={`Current Weather: ${weatherCond.name} (${weatherCond.temperatureC}°C). Click to open Observatory (O)`}
+          >
+            <div className="flex items-center gap-1.5 font-medium text-slate-200">
+              {renderWeatherIcon()}
+              <span className="truncate max-w-[130px] font-semibold" style={{ color: weatherCond.themeColor }}>
+                {weatherCond.name}
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 font-mono text-[11px] text-slate-400">
+              <span>{weatherCond.temperatureC}°C</span>
+              <span className="px-1.5 py-0.2 rounded bg-slate-800 text-indigo-300 font-bold">[O]</span>
+            </div>
+          </button>
 
           {/* Active Dispatch Card (if any) */}
           {stats.activeQuest && (
@@ -222,6 +258,15 @@ export const GameHUD: React.FC<GameHUDProps> = ({
             <span className="font-mono text-[10px] text-rose-400">[G]</span>
           </button>
 
+          {/* Observatory Shortcut */}
+          <button
+            onClick={onOpenObservatory}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-indigo-950/80 hover:bg-indigo-900/80 border border-indigo-700/60 text-xs font-semibold text-indigo-200 shadow-md transition-colors cursor-pointer"
+            title="Open Solstice Weather Observatory (O)"
+          >
+            <Compass className="w-4 h-4 text-indigo-400" />
+            <span className="hidden sm:inline">Weather</span>
+            <span className="font-mono text-[10px] text-indigo-400">[O]</span>
           {/* Winter Pass Shortcut */}
           <button
             onClick={onOpenWinterPass}
@@ -465,6 +510,8 @@ export const GameHUD: React.FC<GameHUDProps> = ({
               <span>WASD steer</span>
               <span>·</span>
               <span>Space Boost</span>
+              <span>·</span>
+              <span>O Weather</span>
               <span>·</span>
               <span>Q Dispatch</span>
               <span>·</span>

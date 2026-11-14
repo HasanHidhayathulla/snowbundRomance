@@ -14,6 +14,8 @@ import { SettingsModal } from './components/SettingsModal';
 import { ShopModal } from './components/ShopModal';
 import { TitleScreen } from './components/TitleScreen';
 import { VictoryModal } from './components/VictoryModal';
+import { WeatherFestivalModal } from './components/WeatherFestivalModal';
+import { ACHIEVEMENTS, LANDMARKS, ROMANTIC_GIFTS } from './game/constants';
 import { WinterPassModal } from './components/WinterPassModal';
 import { ACHIEVEMENTS, LANDMARKS, ROMANTIC_GIFTS, WEATHER_CONDITIONS } from './game/constants';
 import { SnowPlowGameEngine, type GameHUDStats } from './game/engine';
@@ -74,6 +76,11 @@ export default function App() {
     unlockedPaintIds: ['crimson'],
     selectedDecalId: 'heart',
     unlockedDecalIds: ['heart'],
+    currentWeather: 'calm_snow',
+    nextWeather: 'golden_dawn',
+    timeUntilForecastSec: 120,
+    activeCeremonyId: null,
+    activeCeremonyRemainingSec: 0,
     weather: WEATHER_CONDITIONS.gentle_flurry,
     weatherCycleTimeLeft: 75,
     winterPassXp: 0,
@@ -137,6 +144,16 @@ export default function App() {
     }
   };
 
+  const handleOpenObservatory = () => {
+    if (engineRef.current) {
+      engineRef.current.setGameState('OBSERVATORY');
+      engineRef.current.checkAchievement('weather_watcher');
+    }
+  };
+
+  const handleTriggerCeremony = (ceremonyId: string) => {
+    if (engineRef.current) {
+      engineRef.current.triggerSolsticeCeremony(ceremonyId);
   const handleOpenWinterPass = () => {
     if (engineRef.current) {
       engineRef.current.setGameState('WINTER_PASS');
@@ -294,6 +311,7 @@ export default function App() {
           onOpenScrapbook={handleOpenScrapbook}
           onOpenPhotoMode={handleOpenPhotoMode}
           onOpenDispatchRadio={handleOpenDispatchRadio}
+          onOpenObservatory={handleOpenObservatory}
           onOpenWinterPass={handleOpenWinterPass}
           onOpenSettings={handleOpenSettings}
           onPause={handlePause}
@@ -315,6 +333,20 @@ export default function App() {
           onSelectRadioStation={handleSelectRadioStation}
           onStartQuest={handleStartQuest}
           onCancelQuest={handleCancelQuest}
+          onClose={handleResume}
+        />
+      )}
+
+      {/* 3.8 Solstice Weather Forecast & Festival Observatory Modal */}
+      {stats.gameState === 'OBSERVATORY' && (
+        <WeatherFestivalModal
+          currentWeather={stats.currentWeather}
+          nextWeather={stats.nextWeather}
+          timeUntilForecastSec={stats.timeUntilForecastSec}
+          loveLetters={stats.loveLetters}
+          activeCeremonyId={stats.activeCeremonyId}
+          activeCeremonyRemainingSec={stats.activeCeremonyRemainingSec}
+          onTriggerCeremony={handleTriggerCeremony}
           onClose={handleResume}
         />
       )}

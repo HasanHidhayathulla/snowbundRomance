@@ -2,6 +2,9 @@
  * Game constants, upgrade definitions, collectibles, and balance parameters
  */
 
+export type GameState = 'TITLE' | 'PLAYING' | 'PAUSED' | 'GARAGE' | 'VICTORY' | 'SCRAPBOOK' | 'SETTINGS' | 'PHOTO' | 'DISPATCH_RADIO' | 'OBSERVATORY';
+
+export type WeatherType = 'calm_snow' | 'golden_dawn' | 'blizzard' | 'aurora_solstice';
 export type GameState = 'TITLE' | 'PLAYING' | 'PAUSED' | 'GARAGE' | 'VICTORY' | 'SCRAPBOOK' | 'SETTINGS' | 'PHOTO' | 'DISPATCH_RADIO' | 'WINTER_PASS';
 
 export type WeatherType = 'gentle_flurry' | 'heavy_blizzard' | 'clear_aurora' | 'starlight_freeze';
@@ -9,6 +12,123 @@ export type WeatherType = 'gentle_flurry' | 'heavy_blizzard' | 'clear_aurora' | 
 export interface WeatherCondition {
   id: WeatherType;
   name: string;
+  subtitle: string;
+  description: string;
+  temperatureC: number;
+  windSpeedKmh: number;
+  snowRateMmH: number;
+  perkDescription: string;
+  speedMultiplier: number;
+  comboBonusMultiplier: number;
+  warmthAuraBonus: number;
+  skyAtmosphere: 'twilight' | 'golden' | 'aurora';
+  themeColor: string;
+}
+
+export const WEATHER_CONDITIONS: Record<WeatherType, WeatherCondition> = {
+  calm_snow: {
+    id: 'calm_snow',
+    name: 'Gentle Flurry',
+    subtitle: 'Quiet Solstice Twilight',
+    description: 'Soft crystalline snowflakes float peacefully through Valentine Valley.',
+    temperatureC: -4,
+    windSpeedKmh: 8,
+    snowRateMmH: 2.5,
+    perkDescription: 'Standard balanced plowing conditions with steady snowdrifts.',
+    speedMultiplier: 1.0,
+    comboBonusMultiplier: 1.0,
+    warmthAuraBonus: 0,
+    skyAtmosphere: 'twilight',
+    themeColor: '#38bdf8',
+  },
+  golden_dawn: {
+    id: 'golden_dawn',
+    name: 'Golden Hearth Dawn',
+    subtitle: 'Warm Solar Flare',
+    description: 'Amber rays pierce winter mist, warming roads and softening heavy ice drifts.',
+    temperatureC: 1,
+    windSpeedKmh: 14,
+    snowRateMmH: 0.5,
+    perkDescription: '+20% Tractor Speed & +1.5m Passive Warmth Lantern Melting Radius.',
+    speedMultiplier: 1.2,
+    comboBonusMultiplier: 1.2,
+    warmthAuraBonus: 1.5,
+    skyAtmosphere: 'golden',
+    themeColor: '#f59e0b',
+  },
+  blizzard: {
+    id: 'blizzard',
+    name: 'Alpine Howling Blizzard',
+    subtitle: 'Severe Weather Warning',
+    description: 'Fierce winter gusts sweep powder across the village! Challenging plowing with high rewards.',
+    temperatureC: -12,
+    windSpeedKmh: 42,
+    snowRateMmH: 14.0,
+    perkDescription: '+50% Bonus Love Letters per snow combo clearing milestone.',
+    speedMultiplier: 0.9,
+    comboBonusMultiplier: 1.5,
+    warmthAuraBonus: -0.5,
+    skyAtmosphere: 'twilight',
+    themeColor: '#818cf8',
+  },
+  aurora_solstice: {
+    id: 'aurora_solstice',
+    name: 'Aurora Borealis Solstice',
+    subtitle: 'Celestial Wonder',
+    description: 'Radiant emerald and violet auroral ribbons light up the celestial dome.',
+    temperatureC: -6,
+    windSpeedKmh: 18,
+    snowRateMmH: 4.0,
+    perkDescription: '2.0x Combo Score Multiplier & Magnetic Keepsake Resonance boosted by 50%.',
+    speedMultiplier: 1.15,
+    comboBonusMultiplier: 2.0,
+    warmthAuraBonus: 1.0,
+    skyAtmosphere: 'aurora',
+    themeColor: '#34d399',
+  },
+};
+
+export interface SolsticeFestivalCeremony {
+  id: string;
+  name: string;
+  icon: string;
+  costLetters: number;
+  durationSec: number;
+  weatherTrigger: WeatherType;
+  description: string;
+  benefit: string;
+}
+
+export const SOLSTICE_CEREMONIES: SolsticeFestivalCeremony[] = [
+  {
+    id: 'ceremony_lanterns',
+    name: 'Floating Lantern Vigil',
+    icon: 'Flame',
+    costLetters: 35,
+    durationSec: 90,
+    weatherTrigger: 'golden_dawn',
+    description: 'Villagers release hundred warm floating paper lanterns into the dawn sky.',
+    benefit: 'Summons Golden Dawn weather and accelerates plow speed for 90s.',
+  },
+  {
+    id: 'ceremony_aurora_bell',
+    name: 'Solstice Chime of the Aurora',
+    icon: 'Sparkles',
+    costLetters: 50,
+    durationSec: 90,
+    weatherTrigger: 'aurora_solstice',
+    description: 'Ringing the highest alpine bell attracts dancing celestial auroras.',
+    benefit: 'Summons Aurora Solstice weather with 2x combo multiplier boost for 90s.',
+  },
+  {
+    id: 'ceremony_blizzard_dare',
+    name: 'Glacial Hearth Challenge',
+    icon: 'Wind',
+    costLetters: 30,
+    durationSec: 75,
+    weatherTrigger: 'blizzard',
+    description: 'Brave the deepest alpine snowdrifts to earn high-yield letters.',
+    benefit: 'Summons a raging Blizzard with +50% bonus letters for every combo.',
   tagline: string;
   iconName: string;
   fogDensity: number;
@@ -585,6 +705,25 @@ export const ACHIEVEMENTS: SolsticeAchievement[] = [
     rewardLetters: 30,
   },
   {
+    id: 'weather_watcher',
+    title: 'Solstice Meteorologist',
+    description: 'Inspect current forecasts at the Solstice Weather Observatory.',
+    icon: 'Compass',
+    rewardLetters: 25,
+  },
+  {
+    id: 'aurora_reveler',
+    title: 'Celestial Dancer',
+    description: 'Plow snow under the glowing lights of the Aurora Solstice.',
+    icon: 'Sparkles',
+    rewardLetters: 45,
+  },
+  {
+    id: 'blizzard_survivor',
+    title: 'Blizzard Breaker',
+    description: 'Chain combos through an Alpine Howling Blizzard.',
+    icon: 'Wind',
+    rewardLetters: 50,
     id: 'blizzard_survivor',
     title: 'Whiteout Survivor',
     description: 'Plow roads continuously through a raging Solstice Blizzard event.',

@@ -38,6 +38,10 @@ export class ParticleSystem {
   private snowPositions: Float32Array;
   private snowVelocities: Float32Array;
 
+  // Dynamic weather modifiers
+  private weatherWindForceX: number = 0;
+  private weatherFallSpeedMul: number = 1.0;
+
   constructor(scene: THREE.Scene) {
     // 1. Dynamic action particles (plow spray, hearts, sparks)
     this.positions = new Float32Array(this.maxParticles * 3);
@@ -291,6 +295,9 @@ export class ParticleSystem {
     // 2. Update ambient snow centered around camera
     const snowAttr = this.snowMesh.geometry.getAttribute('position') as THREE.BufferAttribute;
     for (let i = 0; i < this.maxSnowflakes; i++) {
+      let sx = this.snowPositions[i * 3 + 0] + (this.snowVelocities[i * 3 + 0] + this.weatherWindForceX) * dt;
+      let sy = this.snowPositions[i * 3 + 1] + (this.snowVelocities[i * 3 + 1] * this.weatherFallSpeedMul) * dt;
+      let sz = this.snowPositions[i * 3 + 2] + this.snowVelocities[i * 3 + 2] * dt;
       let sx = this.snowPositions[i * 3 + 0] + (this.snowVelocities[i * 3 + 0] + windSpeed) * dt;
       let sy = this.snowPositions[i * 3 + 1] + (this.snowVelocities[i * 3 + 1] * particleSpeedMult) * dt;
       let sz = this.snowPositions[i * 3 + 2] + (this.snowVelocities[i * 3 + 2] + windSpeed * 0.3) * dt;
@@ -314,6 +321,11 @@ export class ParticleSystem {
     }
 
     snowAttr.needsUpdate = true;
+  }
+
+  public setWeatherModifiers(windSpeedKmh: number, isBlizzard: boolean) {
+    this.weatherWindForceX = (windSpeedKmh / 50) * 3.5;
+    this.weatherFallSpeedMul = isBlizzard ? 2.5 : 1.0;
   }
 
   public dispose() {

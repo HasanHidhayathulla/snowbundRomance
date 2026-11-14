@@ -7,6 +7,7 @@
 import React, { useState } from 'react';
 import {
   AlertCircle,
+  Award,
   BookOpen,
   Camera,
   ChevronDown,
@@ -18,12 +19,14 @@ import {
   Heart,
   Landmark,
   Mail,
+  Moon,
   Music,
   Pause,
   Radio,
   Settings,
   Snowflake,
   Sun,
+  Sparkles,
   Volume2,
   VolumeX,
   Wind,
@@ -41,6 +44,7 @@ interface GameHUDProps {
   onOpenPhotoMode: () => void;
   onOpenDispatchRadio: () => void;
   onOpenObservatory: () => void;
+  onOpenWinterPass: () => void;
   onOpenSettings: () => void;
   onPause: () => void;
   onCycleRadio: () => void;
@@ -57,6 +61,7 @@ export const GameHUD: React.FC<GameHUDProps> = ({
   onOpenPhotoMode,
   onOpenDispatchRadio,
   onOpenObservatory,
+  onOpenWinterPass,
   onOpenSettings,
   onPause,
   onCycleRadio,
@@ -109,8 +114,8 @@ export const GameHUD: React.FC<GameHUDProps> = ({
             </div>
           </div>
 
-          {/* Landmarks & Gifts Mini Status */}
-          <div className="flex items-center gap-2">
+          {/* Landmarks, Gifts & Live Weather Forecast Mini Status */}
+          <div className="flex items-center gap-2 flex-wrap">
             <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-900/90 border border-slate-800 text-xs text-rose-300 font-medium">
               <Landmark className="w-3.5 h-3.5 text-rose-400" />
               <span>Couples:</span>
@@ -124,6 +129,30 @@ export const GameHUD: React.FC<GameHUDProps> = ({
               <span>Gifts:</span>
               <span className="tabular-nums font-bold text-white">
                 {stats.giftsFound}/{stats.totalGifts}
+              </span>
+            </div>
+
+            {/* Weather Forecast Badge */}
+            <div
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-semibold shadow-sm ${
+                stats.weather.id === 'heavy_blizzard'
+                  ? 'bg-rose-950/90 border-rose-600 text-rose-200 animate-pulse'
+                  : 'bg-slate-900/90 border-slate-800 text-sky-200'
+              }`}
+              title={`${stats.weather.name}: ${stats.weather.tagline}`}
+            >
+              {stats.weather.id === 'heavy_blizzard' ? (
+                <Wind className="w-3.5 h-3.5 text-rose-400" />
+              ) : stats.weather.id === 'clear_aurora' ? (
+                <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+              ) : stats.weather.id === 'starlight_freeze' ? (
+                <Moon className="w-3.5 h-3.5 text-purple-400" />
+              ) : (
+                <CloudSnow className="w-3.5 h-3.5 text-cyan-400" />
+              )}
+              <span>{stats.weather.name}</span>
+              <span className="font-mono text-[10px] text-slate-400">
+                ({stats.weatherCycleTimeLeft}s)
               </span>
             </div>
           </div>
@@ -238,6 +267,20 @@ export const GameHUD: React.FC<GameHUDProps> = ({
             <Compass className="w-4 h-4 text-indigo-400" />
             <span className="hidden sm:inline">Weather</span>
             <span className="font-mono text-[10px] text-indigo-400">[O]</span>
+          {/* Winter Pass Shortcut */}
+          <button
+            onClick={onOpenWinterPass}
+            className="relative flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-amber-950/80 to-yellow-950/80 hover:from-amber-900/80 hover:to-yellow-900/80 border border-amber-600/60 text-xs font-semibold text-amber-200 shadow-md transition-colors cursor-pointer"
+            title="Open Solstice Winter Pass (B)"
+          >
+            <Award className="w-4 h-4 text-amber-400" />
+            <span className="hidden sm:inline">Pass</span>
+            <span className="font-mono text-[10px] text-amber-300">T{stats.winterPassLevel}</span>
+            {stats.unclaimedPassRewardsCount > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-600 text-white font-mono text-[10px] font-bold flex items-center justify-center animate-bounce">
+                {stats.unclaimedPassRewardsCount}
+              </span>
+            )}
           </button>
 
           {/* Dispatch & Radio Shortcut */}
@@ -473,6 +516,8 @@ export const GameHUD: React.FC<GameHUDProps> = ({
               <span>Q Dispatch</span>
               <span>·</span>
               <span>R Radio</span>
+              <span>·</span>
+              <span>B Pass</span>
               <span>·</span>
               <span>P Photo</span>
               <span>·</span>

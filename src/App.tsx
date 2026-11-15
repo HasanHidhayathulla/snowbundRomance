@@ -102,10 +102,18 @@ export default function App() {
     };
   }, []);
 
-  const handleStartGame = () => {
-    if (engineRef.current) {
-      engineRef.current.startGame();
+  const getEngine = (action: string): SnowPlowGameEngine | null => {
+    if (!engineRef.current) {
+      console.warn(`[Snowbound Hearts] Cannot run "${action}": game engine is not initialized yet.`);
+      return null;
     }
+    return engineRef.current;
+  };
+
+  const handleStartGame = () => {
+    const engine = getEngine('handleStartGame');
+    if (!engine) return;
+    engine.startGame();
   };
 
   // Apply loaded audio settings on mount
@@ -124,66 +132,71 @@ export default function App() {
     if (newVals.musicVolume !== undefined) synthAudio.setMusicVolume(newVals.musicVolume);
     if (newVals.sfxVolume !== undefined) synthAudio.setSfxVolume(newVals.sfxVolume);
     if (newVals.isMuted !== undefined) synthAudio.setMute(newVals.isMuted);
-    if (newVals.radioStationId !== undefined && engineRef.current) {
-      engineRef.current.setRadioStation(newVals.radioStationId);
-    }
-    if (newVals.atmosphere !== undefined && engineRef.current) {
-      engineRef.current.applyAtmosphere(newVals.atmosphere);
+
+    if (newVals.radioStationId !== undefined || newVals.atmosphere !== undefined) {
+      const engine = getEngine('handleUpdateSettings');
+      if (!engine) return;
+      if (newVals.radioStationId !== undefined) {
+        engine.setRadioStation(newVals.radioStationId);
+      }
+      if (newVals.atmosphere !== undefined) {
+        engine.applyAtmosphere(newVals.atmosphere);
+      }
     }
   };
 
   const handleOpenDispatchRadio = () => {
-    if (engineRef.current) {
-      engineRef.current.setGameState('DISPATCH_RADIO');
-    }
+    const engine = getEngine('handleOpenDispatchRadio');
+    if (!engine) return;
+    engine.setGameState('DISPATCH_RADIO');
   };
 
   const handleOpenWinterPass = () => {
-    if (engineRef.current) {
-      engineRef.current.setGameState('WINTER_PASS');
-    }
+    const engine = getEngine('handleOpenWinterPass');
+    if (!engine) return;
+    engine.setGameState('WINTER_PASS');
   };
 
   const handleClaimPassTierReward = (tierLevel: number) => {
-    if (engineRef.current) {
-      engineRef.current.claimPassTierReward(tierLevel);
-    }
+    const engine = getEngine('handleClaimPassTierReward');
+    if (!engine) return;
+    engine.claimPassTierReward(tierLevel);
   };
 
   const handleSelectRadioStation = (stationId: string) => {
-    if (engineRef.current) {
-      engineRef.current.setRadioStation(stationId);
-    }
+    const engine = getEngine('handleSelectRadioStation');
+    if (!engine) return;
+    engine.setRadioStation(stationId);
   };
 
   const handleCycleRadio = () => {
-    if (engineRef.current) {
-      engineRef.current.cycleRadioStation();
-    }
+    const engine = getEngine('handleCycleRadio');
+    if (!engine) return;
+    engine.cycleRadioStation();
   };
 
   const handleStartQuest = (questId: string) => {
-    if (engineRef.current) {
-      engineRef.current.startQuest(questId);
-    }
+    const engine = getEngine('handleStartQuest');
+    if (!engine) return;
+    engine.startQuest(questId);
   };
 
   const handleCancelQuest = () => {
-    if (engineRef.current) {
-      engineRef.current.cancelQuest();
-    }
+    const engine = getEngine('handleCancelQuest');
+    if (!engine) return;
+    engine.cancelQuest();
   };
 
   const handleSelectPaint = (paintId: string) => {
-    if (engineRef.current) {
-      engineRef.current.purchasePaint(paintId);
-    }
+    const engine = getEngine('handleSelectPaint');
+    if (!engine) return;
+    engine.purchasePaint(paintId);
   };
 
   const handleSelectDecal = (decalId: string) => {
-    if (engineRef.current) {
-      engineRef.current.purchaseDecal(decalId);
-    }
+    const engine = getEngine('handleSelectDecal');
+    if (!engine) return;
+    engine.purchaseDecal(decalId);
   };
 
   const handleToggleMute = () => {
@@ -197,78 +210,83 @@ export default function App() {
   };
 
   const handleOpenWorkshop = () => {
-    if (engineRef.current) {
-      engineRef.current.setGameState('GARAGE');
-    }
+    const engine = getEngine('handleOpenWorkshop');
+    if (!engine) return;
+    engine.setGameState('GARAGE');
   };
 
   const handleOpenScrapbook = () => {
-    if (engineRef.current) {
-      engineRef.current.setGameState('SCRAPBOOK');
-    }
+    const engine = getEngine('handleOpenScrapbook');
+    if (!engine) return;
+    engine.setGameState('SCRAPBOOK');
   };
 
   const handleOpenPhotoMode = () => {
-    if (engineRef.current) {
-      engineRef.current.setGameState('PHOTO');
-    }
+    const engine = getEngine('handleOpenPhotoMode');
+    if (!engine) return;
+    engine.setGameState('PHOTO');
   };
 
   const handleCapturePostcard = async (filterId: string, stampId: string, caption: string) => {
-    if (engineRef.current) {
-      return engineRef.current.capturePostcard(filterId, stampId, caption);
-    }
-    return '';
+    const engine = getEngine('handleCapturePostcard');
+    if (!engine) return '';
+    return engine.capturePostcard(filterId, stampId, caption);
   };
 
   const handleOpenSettings = () => {
-    if (engineRef.current) {
-      engineRef.current.setGameState('SETTINGS');
-    }
+    const engine = getEngine('handleOpenSettings');
+    if (!engine) return;
+    engine.setGameState('SETTINGS');
   };
 
   const handlePause = () => {
-    if (engineRef.current) {
-      engineRef.current.setGameState('PAUSED');
-    }
+    const engine = getEngine('handlePause');
+    if (!engine) return;
+    engine.setGameState('PAUSED');
   };
 
   const handleResume = () => {
-    if (engineRef.current) {
-      engineRef.current.setGameState('PLAYING');
-    }
+    const engine = getEngine('handleResume');
+    if (!engine) return;
+    engine.setGameState('PLAYING');
+  };
+
+  const handleReturnToTitle = () => {
+    const engine = getEngine('handleReturnToTitle');
+    if (!engine) return;
+    engine.setGameState('TITLE');
   };
 
   const handleContinueFreeRoam = () => {
-    if (engineRef.current) {
-      engineRef.current.continueFreeRoam();
-    }
+    const engine = getEngine('handleContinueFreeRoam');
+    if (!engine) return;
+    engine.continueFreeRoam();
   };
 
   const handleBuyUpgrade = (upgradeId: string) => {
-    if (engineRef.current) {
-      engineRef.current.purchaseUpgrade(upgradeId);
-    }
+    const engine = getEngine('handleBuyUpgrade');
+    if (!engine) return;
+    engine.purchaseUpgrade(upgradeId);
   };
 
   const handleRestart = () => {
-    if (engineRef.current) {
-      engineRef.current.resetGame();
-    }
+    const engine = getEngine('handleRestart');
+    if (!engine) return;
+    engine.resetGame();
   };
 
   const handleResetProgress = () => {
     clearGameData();
     setHighestCombo(1);
-    if (engineRef.current) {
-      engineRef.current.resetGame();
-    }
+    const engine = getEngine('handleResetProgress');
+    if (!engine) return;
+    engine.resetGame();
   };
 
   const handleVirtualInput = (throttle: number, steer: number, boost: boolean) => {
-    if (engineRef.current) {
-      engineRef.current.setVirtualInput(throttle, steer, boost);
-    }
+    const engine = getEngine('handleVirtualInput');
+    if (!engine) return;
+    engine.setVirtualInput(throttle, steer, boost);
   };
 
   return (
@@ -388,7 +406,7 @@ export default function App() {
           unlockedAchievementIds={stats.unlockedAchievementIds}
           highestCombo={highestCombo}
           totalLetters={stats.loveLetters}
-          onClose={stats.snowClearedPercent > 0 ? handleResume : () => engineRef.current?.setGameState('TITLE')}
+          onClose={stats.snowClearedPercent > 0 ? handleResume : handleReturnToTitle}
           onOpenPhotoMode={handleOpenPhotoMode}
         />
       )}
@@ -402,7 +420,7 @@ export default function App() {
           settings={settings}
           onUpdateSettings={handleUpdateSettings}
           onResetProgress={handleResetProgress}
-          onClose={stats.snowClearedPercent > 0 ? handleResume : () => engineRef.current?.setGameState('TITLE')}
+          onClose={stats.snowClearedPercent > 0 ? handleResume : handleReturnToTitle}
         />
       )}
 

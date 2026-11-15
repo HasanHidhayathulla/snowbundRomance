@@ -100,6 +100,20 @@ export class SnowGridSystem {
   }
 
   /**
+   * Restore full fresh snow blanket across the entire village
+   */
+  public resetSnow() {
+    this.ctx.save();
+    this.ctx.globalCompositeOperation = 'source-over';
+    this.ctx.globalAlpha = 1.0;
+    this.ctx.fillStyle = '#ffffff';
+    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    this.ctx.restore();
+    this.snowTexture.needsUpdate = true;
+    this.initSnowGrid();
+  }
+
+  /**
    * Generates procedural cobblestone pattern for cleared streets
    */
   private createCobblestoneTexture(): THREE.CanvasTexture {

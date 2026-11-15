@@ -66,6 +66,7 @@ export interface GameHUDStats {
   comboLevel: number;
   comboMultiplier: number;
   comboTitle: string;
+  comboClipTitle: string | null;
   comboTimerProgress: number; // 0 to 1
   boostPercent: number;
   speedKmh: number;
@@ -153,6 +154,9 @@ export class SnowPlowGameEngine {
   // Combo & Progression State
   private comboLevel: number = 1;
   private comboTimer: number = 0;
+  private comboClipTitle: string | null = null;
+  private comboClipTimer: number = 0;
+  private comboEncoreCount: number = 0;
   private snowClearedAccumulator: number = 0;
   private snowClearedPercent: number = 0;
   private loveLetters: number = 20;
@@ -203,6 +207,7 @@ export class SnowPlowGameEngine {
 
   // Active Game State
   private gameState: GameState = 'TITLE';
+  private hasTriggeredVictory: boolean = false;
 
   constructor(container: HTMLElement, onHUDUpdate?: (stats: GameHUDStats) => void) {
     this.container = container;
@@ -468,6 +473,7 @@ export class SnowPlowGameEngine {
       ...lm,
       cleared: savedClearedIds.has(lm.id),
     }));
+    this.hasTriggeredVictory = this.landmarks.length > 0 && this.landmarks.every((l) => l.cleared);
 
     this.landmarks.forEach((lm) => {
       let landmarkMesh: THREE.Group;
@@ -535,6 +541,8 @@ export class SnowPlowGameEngine {
           this.setGameState('PAUSED');
         } else if (this.gameState === 'PAUSED') {
           this.setGameState('PLAYING');
+        } else if (this.gameState === 'VICTORY') {
+          this.continueFreeRoam();
         }
       }
       if (e.code === 'KeyL') {
@@ -716,6 +724,15 @@ export class SnowPlowGameEngine {
     if (state === 'PLAYING') {
       synthAudio.resume();
     }
+    this.pushHUDUpdate();
+  }
+
+  public continueFreeRoam() {
+    this.hasTriggeredVictory = true;
+    this.gameState = 'PLAYING';
+    synthAudio.init();
+    synthAudio.resume();
+    this.triggerMessage('Free Roam Mode: Keep plowing snow & discovering hidden gifts!');
     this.pushHUDUpdate();
   }
 
@@ -1197,6 +1214,16 @@ export class SnowPlowGameEngine {
         this.checkAchievement('first_tracks');
       }
 
+      // Combo audio clip title display timer
+      if (this.comboClipTimer > 0) {
+        this.comboClipTimer -= dt;
+        if (this.comboClipTimer <= 0) {
+          this.comboClipTimer = 0;
+          this.comboClipTitle = null;
+          this.pushHUDUpdate();
+        }
+      }
+
       // Combo management: continuous plowing sustains and escalates combo
       this.comboTimer = comboWindow;
       if (this.snowClearedAccumulator > 35 * this.comboLevel) {
@@ -1211,8 +1238,14 @@ export class SnowPlowGameEngine {
             this.checkAchievement('midnight_waltz');
           }
 
-          synthAudio.playComboChime(this.comboLevel);
-          this.particles.emitRomanticHearts(this.posX, 1.2, this.posZ, 8);
+          if (this.comboLevel >= 3) {
+            this.comboClipTitle = synthAudio.playHighComboClip(this.comboLevel);
+            this.comboClipTimer = 2.6;
+          } else {
+            synthAudio.playComboChime(this.comboLevel);
+          }
+
+          this.particles.emitRomanticHearts(this.posX, 1.2, this.posZ, 6 + this.comboLevel * 2);
           this.cameraShakeIntensity = 0.15;
 
           // Gain love letters on combo progression
@@ -1222,15 +1255,41 @@ export class SnowPlowGameEngine {
           this.addWinterPassXp(Math.round(15 * currentCombo.multiplier));
           saveGameProgress({ loveLetters: this.loveLetters });
           this.triggerMessage(`${currentCombo.title}! Combo x${currentCombo.multiplier.toFixed(1)} (+${lettersGained} Letters)`);
+        } else {
+          // Sustained Max Combo (Level 8): rotate encore romantic audio clips
+          this.comboClipTitle = synthAudio.playHighComboClip(8, this.comboEncoreCount++);
+          this.comboClipTimer = 2.6;
+          this.particles.emitRomanticHearts(this.posX, 1.2, this.posZ, 20);
+          this.cameraShakeIntensity = 0.12;
+          const encoreLetters = 25;
+          this.loveLetters += encoreLetters;
+          this.addWinterPassXp(60);
+          saveGameProgress({ loveLetters: this.loveLetters });
+          this.triggerMessage(`${this.comboClipTitle}! Max Combo Encore (+${encoreLetters} Letters)`);
         }
       }
     } else {
+      if (this.comboClipTimer > 0) {
+        this.comboClipTimer -= dt;
+        if (this.comboClipTimer <= 0) {
+          this.comboClipTimer = 0;
+          this.comboClipTitle = null;
+          this.pushHUDUpdate();
+        }
+      }
+
       // Decay combo timer when not actively plowing snow
       if (this.comboTimer > 0) {
         this.comboTimer -= dt;
         if (this.comboTimer <= 0) {
           if (this.comboLevel > 1) {
+            if (this.comboLevel >= 3) {
+              synthAudio.playComboFadeChime();
+            }
             this.comboLevel = 1;
+            this.comboEncoreCount = 0;
+            this.comboClipTitle = null;
+            this.comboClipTimer = 0;
             this.snowClearedAccumulator = 0;
             this.pushHUDUpdate();
           }
@@ -1369,8 +1428,9 @@ export class SnowPlowGameEngine {
       }
     });
 
-    // Check Victory Condition: All 4 landmarks cleared
-    if (allCleared && this.landmarks.length > 0) {
+    // Check Victory Condition: All 4 landmarks cleared (trigger once per run)
+    if (allCleared && this.landmarks.length > 0 && !this.hasTriggeredVictory) {
+      this.hasTriggeredVictory = true;
       this.gameState = 'VICTORY';
       this.checkAchievement('grand_savior');
       synthAudio.playLandmarkReunion();
@@ -1468,6 +1528,7 @@ export class SnowPlowGameEngine {
       comboLevel: this.comboLevel,
       comboMultiplier: currentCombo.multiplier,
       comboTitle: currentCombo.title,
+      comboClipTitle: this.comboClipTitle,
       comboTimerProgress: this.comboTimer > 0 ? this.comboTimer / comboWindow : 0,
       boostPercent: Math.round(this.boostFuel),
       speedKmh: Math.round(Math.abs(this.speed) * 3.6),
@@ -1520,6 +1581,7 @@ export class SnowPlowGameEngine {
       comboLevel: this.comboLevel,
       comboMultiplier: currentCombo.multiplier,
       comboTitle: currentCombo.title,
+      comboClipTitle: this.comboClipTitle,
       comboTimerProgress: this.comboTimer > 0 ? this.comboTimer / comboWindow : 0,
       boostPercent: Math.round(this.boostFuel),
       speedKmh: Math.round(Math.abs(this.speed) * 3.6),
@@ -1576,24 +1638,56 @@ export class SnowPlowGameEngine {
     this.speed = 0;
     this.steerAngle = 0;
     this.boostFuel = 100;
+    this.isBoosting = false;
+    this.isPlowing = false;
     this.comboLevel = 1;
     this.comboTimer = 0;
+    this.comboClipTitle = null;
+    this.comboClipTimer = 0;
+    this.comboEncoreCount = 0;
     this.snowClearedAccumulator = 0;
     this.snowClearedPercent = 0;
+    this.blizzardContinuousTimer = 0;
+    this.hitstopDuration = 0;
+    this.cameraShakeIntensity = 0;
+    this.squashStretchY = 1;
+    this.hasTriggeredVictory = false;
 
-    // Reset landmarks & gifts
+    // Reset tractor visual transform
+    this.tractorGroup.position.set(0, 0, 0);
+    this.tractorGroup.rotation.y = Math.PI;
+    this.tractorGroup.scale.set(1, 1, 1);
+
+    // Clear active dispatch quest if any
+    this.activeQuest = null;
+    this.questBeaconGroup.visible = false;
+
+    // Replenish fresh snow blanket & mathematical depth grid
+    this.snowGrid.resetSnow();
+
+    // Reset landmarks & gifts (restore original coordinates for magnet-pulled gifts)
     this.landmarks.forEach((l) => {
       l.cleared = false;
       const c = this.coupleMeshes.get(l.id);
       if (c) c.visible = false;
     });
+    this.gifts = ROMANTIC_GIFTS.map((g) => ({
+      ...g,
+      collected: false,
+      revealed: false,
+    }));
     this.gifts.forEach((g) => {
-      g.collected = false;
       const m = this.giftMeshes.get(g.id);
-      if (m) m.visible = false;
+      if (m) {
+        m.position.set(g.x, 0.4, g.z);
+        m.visible = false;
+      }
     });
 
+    this.saveProgressState();
     this.gameState = 'PLAYING';
+    synthAudio.init();
+    synthAudio.resume();
     this.triggerMessage('Fresh snow has fallen! Clear the pathways once more!');
     this.pushHUDUpdate();
   }

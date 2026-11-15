@@ -23,7 +23,7 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
   onRestart,
 }) => {
   return (
-    <div className="absolute inset-0 flex items-center justify-center p-4 bg-slate-950/80 z-40 select-none">
+    <div className="absolute inset-0 flex items-center justify-center p-4 bg-slate-950/80 z-50 select-none">
       <div className="w-full max-w-lg bg-slate-900 border border-rose-500/40 rounded-2xl shadow-2xl p-6 text-slate-100 flex flex-col items-center text-center gap-5">
         <div className="p-3 rounded-2xl bg-rose-950/60 border border-rose-800/60">
           <Heart className="w-10 h-10 text-rose-500 fill-rose-500" />
@@ -63,6 +63,7 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
         {/* Buttons */}
         <div className="flex flex-col sm:flex-row gap-3 w-full pt-2">
           <button
+            type="button"
             onClick={onContinue}
             className="flex-1 py-3 px-4 rounded-xl bg-rose-600 hover:bg-rose-500 font-semibold text-white flex items-center justify-center gap-2 transition-colors cursor-pointer"
           >
@@ -71,6 +72,7 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
           </button>
 
           <button
+            type="button"
             onClick={onRestart}
             className="py-3 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold flex items-center justify-center gap-2 border border-slate-700 transition-colors cursor-pointer"
           >

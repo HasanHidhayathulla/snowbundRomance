@@ -199,6 +199,17 @@ export const GameHUD: React.FC<GameHUDProps> = ({
                 />
               </div>
             )}
+
+            {/* High-combo audio clip whisper */}
+            {stats.comboClipTitle && (
+              <div
+                className="flex items-center justify-center gap-1 mt-1 text-[10px] font-semibold tracking-wide"
+                style={{ color: comboInfo.color }}
+              >
+                <Music className="w-3 h-3 shrink-0" />
+                <span>♪ {stats.comboClipTitle}</span>
+              </div>
+            )}
           </div>
         </div>
 

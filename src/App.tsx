@@ -44,6 +44,7 @@ export default function App() {
     comboLevel: 1,
     comboMultiplier: 1.0,
     comboTitle: 'Cozy Flurry',
+    comboClipTitle: null,
     comboTimerProgress: 0,
     boostPercent: 100,
     speedKmh: 0,
@@ -238,6 +239,12 @@ export default function App() {
     }
   };
 
+  const handleContinueFreeRoam = () => {
+    if (engineRef.current) {
+      engineRef.current.continueFreeRoam();
+    }
+  };
+
   const handleBuyUpgrade = (upgradeId: string) => {
     if (engineRef.current) {
       engineRef.current.purchaseUpgrade(upgradeId);
@@ -406,7 +413,7 @@ export default function App() {
           loveLetters={stats.loveLetters}
           giftsFound={stats.giftsFound}
           totalGifts={stats.totalGifts}
-          onContinue={handleResume}
+          onContinue={handleContinueFreeRoam}
           onRestart={handleRestart}
         />
       )}

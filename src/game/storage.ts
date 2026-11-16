@@ -25,6 +25,13 @@ export interface SavedPostcard {
   clearedPercent: number;
 }
 
+export interface DailyChallengeProgress {
+  dayKey: string;
+  challengeId: string;
+  completedStepIds: string[];
+  completed: boolean;
+}
+
 export interface PersistentProgress {
   loveLetters: number;
   upgrades: Record<string, number>;
@@ -42,6 +49,8 @@ export interface PersistentProgress {
   selectedDecalId: string;
   winterPassXp: number;
   claimedPassTierIds: number[];
+  dailyChallenge?: DailyChallengeProgress;
+  dailyChallengesCompletedCount?: number;
   savedPostcards?: SavedPostcard[];
 }
 
@@ -83,6 +92,7 @@ export const DEFAULT_PROGRESS: PersistentProgress = {
   selectedDecalId: 'heart',
   winterPassXp: 0,
   claimedPassTierIds: [],
+  dailyChallengesCompletedCount: 0,
 };
 
 export function loadGameSettings(): GameSettings {

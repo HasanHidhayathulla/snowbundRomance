@@ -9,7 +9,9 @@ import {
   AlertCircle,
   Award,
   BookOpen,
+  CalendarHeart,
   Camera,
+  CheckCircle2,
   ChevronDown,
   ChevronUp,
   Clock,
@@ -43,6 +45,7 @@ interface GameHUDProps {
   onOpenPhotoMode: () => void;
   onOpenDispatchRadio: () => void;
   onOpenWinterPass: () => void;
+  onOpenDailyChallenge: () => void;
   onOpenSettings: () => void;
   onPause: () => void;
   onCycleRadio: () => void;
@@ -59,6 +62,7 @@ export const GameHUD: React.FC<GameHUDProps> = ({
   onOpenPhotoMode,
   onOpenDispatchRadio,
   onOpenWinterPass,
+  onOpenDailyChallenge,
   onOpenSettings,
   onPause,
   onCycleRadio,
@@ -161,6 +165,40 @@ export const GameHUD: React.FC<GameHUDProps> = ({
               </div>
             </div>
           )}
+
+          {/* Daily Romantic Challenge Tracker Card */}
+          <button
+            type="button"
+            onClick={onOpenDailyChallenge}
+            className={`px-3 py-2 rounded-xl border text-xs flex items-center justify-between gap-3 shadow-md cursor-pointer transition-colors text-left ${
+              stats.dailyChallenge.completed
+                ? 'bg-emerald-950/90 border-emerald-700/60 text-emerald-200 hover:border-emerald-500'
+                : 'bg-slate-900/90 border-rose-500/40 text-rose-200 hover:border-rose-400'
+            }`}
+            title="Open Daily Romantic Challenge (C)"
+          >
+            <div className="flex items-center gap-2 min-w-0">
+              {stats.dailyChallenge.completed ? (
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+              ) : (
+                <CalendarHeart className="w-4 h-4 text-rose-400 shrink-0" />
+              )}
+              <div className="min-w-0">
+                <div className="font-bold text-white truncate max-w-[165px]">
+                  {stats.dailyChallenge.challenge.title}
+                </div>
+                <div className="text-[10px] text-slate-400 flex items-center gap-1.5">
+                  <span>Daily 24h</span>
+                  <span>·</span>
+                  <span className="text-amber-300 font-mono">+{stats.dailyChallenge.challenge.rewardLetters}</span>
+                  <span className="text-slate-500 font-mono">[C]</span>
+                </div>
+              </div>
+            </div>
+            <div className="px-2 py-0.5 rounded bg-slate-950/80 font-mono tabular-nums font-bold text-[11px] text-rose-300 shrink-0">
+              {stats.dailyChallenge.completedCount}/{stats.dailyChallenge.totalCount}
+            </div>
+          </button>
         </div>
 
         {/* Top-Center: Romantic Combo Multiplier Badge */}
@@ -360,6 +398,16 @@ export const GameHUD: React.FC<GameHUDProps> = ({
                   }
                 : null
             }
+            dailyTargets={
+              stats.dailyChallenge.completed
+                ? []
+                : stats.dailyChallenge.steps.map((s) => ({
+                    id: s.id,
+                    x: s.x,
+                    z: s.z,
+                    completed: s.completed,
+                  }))
+            }
           />
         </div>
       )}
@@ -484,6 +532,8 @@ export const GameHUD: React.FC<GameHUDProps> = ({
               <span>B Pass</span>
               <span>·</span>
               <span>P Photo</span>
+              <span>·</span>
+              <span>C Daily</span>
               <span>·</span>
               <span>G Atelier</span>
               <span>·</span>

@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { Award, BookOpen, Camera, Play, Radio, RotateCcw, Settings, Volume2, VolumeX, Wrench } from 'lucide-react';
+import { Award, BookOpen, CalendarHeart, Camera, Play, Radio, RotateCcw, Settings, Volume2, VolumeX, Wrench } from 'lucide-react';
 
 interface PauseModalProps {
   onResume: () => void;
@@ -13,6 +13,7 @@ interface PauseModalProps {
   onOpenPhotoMode: () => void;
   onOpenDispatchRadio: () => void;
   onOpenWinterPass: () => void;
+  onOpenDailyChallenge: () => void;
   onOpenSettings: () => void;
   isMuted: boolean;
   onToggleMute: () => void;
@@ -28,6 +29,7 @@ export const PauseModal: React.FC<PauseModalProps> = ({
   onOpenPhotoMode,
   onOpenDispatchRadio,
   onOpenWinterPass,
+  onOpenDailyChallenge,
   onOpenSettings,
   isMuted,
   onToggleMute,
@@ -58,6 +60,14 @@ export const PauseModal: React.FC<PauseModalProps> = ({
           >
             <Award className="w-4 h-4 text-amber-400" />
             <span>Solstice Winter Pass & Track (B)</span>
+          </button>
+
+          <button
+            onClick={onOpenDailyChallenge}
+            className="w-full py-2.5 px-4 rounded-xl bg-rose-950/70 hover:bg-rose-900/80 text-rose-200 font-medium flex items-center justify-center gap-2 border border-rose-800/60 transition-colors cursor-pointer"
+          >
+            <CalendarHeart className="w-4 h-4 text-rose-400" />
+            <span>Daily Romantic Challenge (C)</span>
           </button>
 
           <button

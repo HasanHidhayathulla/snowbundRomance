@@ -2,7 +2,7 @@
  * Game constants, upgrade definitions, collectibles, and balance parameters
  */
 
-export type GameState = 'TITLE' | 'PLAYING' | 'PAUSED' | 'GARAGE' | 'VICTORY' | 'SCRAPBOOK' | 'SETTINGS' | 'PHOTO' | 'DISPATCH_RADIO' | 'WINTER_PASS';
+export type GameState = 'TITLE' | 'PLAYING' | 'PAUSED' | 'GARAGE' | 'VICTORY' | 'SCRAPBOOK' | 'SETTINGS' | 'PHOTO' | 'DISPATCH_RADIO' | 'WINTER_PASS' | 'DAILY_CHALLENGE';
 
 export type WeatherType = 'gentle_flurry' | 'heavy_blizzard' | 'clear_aurora' | 'starlight_freeze';
 
@@ -605,7 +605,150 @@ export const ACHIEVEMENTS: SolsticeAchievement[] = [
     icon: 'Crown',
     rewardLetters: 150,
   },
+  {
+    id: 'daily_devotion',
+    title: 'Solstice Sweetheart',
+    description: 'Complete a rotating 24-hour Daily Romantic Challenge.',
+    icon: 'Heart',
+    rewardLetters: 40,
+  },
 ];
+
+export type DailyChallengeCategory = 'landmark_visit' | 'snow_pattern';
+
+export interface DailyPatternPoint {
+  id: string;
+  label: string;
+  x: number;
+  z: number;
+}
+
+export interface DailyRomanticChallenge {
+  id: string;
+  title: string;
+  subtitle: string;
+  category: DailyChallengeCategory;
+  patternName?: string;
+  description: string;
+  rewardLetters: number;
+  rewardPassXp: number;
+  requiredLandmarkIds?: string[];
+  patternPoints?: DailyPatternPoint[];
+}
+
+export const DAILY_ROMANTIC_CHALLENGES: DailyRomanticChallenge[] = [
+  {
+    id: 'daily_heart_carve',
+    title: 'Heart in the Valley Powder',
+    subtitle: 'Romantic Snow Art',
+    category: 'snow_pattern',
+    patternName: 'Heart Loop',
+    description: 'Plow a giant glowing heart trail across the central Valentine Meadow by carving through all 8 heart waypoints.',
+    rewardLetters: 90,
+    rewardPassXp: 150,
+    patternPoints: [
+      { id: 'pt-0', label: 'Heart Cleft (Top Center)', x: 0, z: 2 },
+      { id: 'pt-1', label: 'Right Lobe Crest', x: 6, z: -2 },
+      { id: 'pt-2', label: 'Right Shoulder Curve', x: 10, z: 3 },
+      { id: 'pt-3', label: 'Right Taper Sweep', x: 6, z: 10 },
+      { id: 'pt-4', label: 'Heart Tip (South Point)', x: 0, z: 16 },
+      { id: 'pt-5', label: 'Left Taper Sweep', x: -6, z: 10 },
+      { id: 'pt-6', label: 'Left Shoulder Curve', x: -10, z: 3 },
+      { id: 'pt-7', label: 'Left Lobe Crest', x: -6, z: -2 },
+    ],
+  },
+  {
+    id: 'daily_bridge_bakery_date',
+    title: 'Bridge to Bakery Promenade',
+    subtitle: 'Landmark Pilgrimage',
+    category: 'landmark_visit',
+    description: 'Drive your Heartplow from Stone Lover’s Bridge to The Cinnamon & Clove Bakery to deliver warm solstice wishes.',
+    rewardLetters: 75,
+    rewardPassXp: 120,
+    requiredLandmarkIds: ['lovers-bridge', 'bakery'],
+  },
+  {
+    id: 'daily_solstice_halo',
+    title: 'Ring Around the Solstice Tree',
+    subtitle: 'Romantic Snow Art',
+    category: 'snow_pattern',
+    patternName: 'Solstice Ring',
+    description: 'Carve a radiant circular halo in the snow encircling the Grand Solstice Tree in Town Square.',
+    rewardLetters: 85,
+    rewardPassXp: 140,
+    patternPoints: [
+      { id: 'pt-0', label: 'North Square Arch', x: 12, z: -10 },
+      { id: 'pt-1', label: 'Northeast Garland', x: 19, z: -7 },
+      { id: 'pt-2', label: 'East Festival Lane', x: 22, z: 0 },
+      { id: 'pt-3', label: 'Southeast Lanterns', x: 19, z: 7 },
+      { id: 'pt-4', label: 'South Square Steps', x: 12, z: 10 },
+      { id: 'pt-5', label: 'Southwest Evergreen', x: 5, z: 7 },
+      { id: 'pt-6', label: 'West Gazebo Edge', x: 2, z: 0 },
+      { id: 'pt-7', label: 'Northwest Hearth', x: 5, z: -7 },
+    ],
+  },
+  {
+    id: 'daily_clocktower_square',
+    title: 'Starlight Chimes Tour',
+    subtitle: 'Landmark Pilgrimage',
+    category: 'landmark_visit',
+    description: 'Visit the Alpine Starlight Clocktower and the Grand Solstice Gazebo & Tree during a single winter patrol.',
+    rewardLetters: 80,
+    rewardPassXp: 130,
+    requiredLandmarkIds: ['clocktower', 'town-square'],
+  },
+  {
+    id: 'daily_figure_eight_waltz',
+    title: 'Snowlit Figure-Eight Waltz',
+    subtitle: 'Romantic Snow Art',
+    category: 'snow_pattern',
+    patternName: 'Infinity Waltz',
+    description: 'Trace a graceful figure-eight dance across the open snowfields between the East and West meadows.',
+    rewardLetters: 95,
+    rewardPassXp: 160,
+    patternPoints: [
+      { id: 'pt-0', label: 'Center Pivot', x: 0, z: 0 },
+      { id: 'pt-1', label: 'East Loop North', x: 7, z: -6 },
+      { id: 'pt-2', label: 'East Loop Apex', x: 12, z: 0 },
+      { id: 'pt-3', label: 'East Loop South', x: 7, z: 6 },
+      { id: 'pt-4', label: 'West Loop North', x: -7, z: -6 },
+      { id: 'pt-5', label: 'West Loop Apex', x: -12, z: 0 },
+      { id: 'pt-6', label: 'West Loop South', x: -7, z: 6 },
+    ],
+  },
+  {
+    id: 'daily_grand_valley_tour',
+    title: 'Grand Lovers’ Valley Tour',
+    subtitle: 'Landmark Pilgrimage',
+    category: 'landmark_visit',
+    description: 'Make a heartwarming tour across three iconic romantic landmarks: Lover’s Bridge, Clocktower, and Bakery.',
+    rewardLetters: 110,
+    rewardPassXp: 180,
+    requiredLandmarkIds: ['lovers-bridge', 'clocktower', 'bakery'],
+  },
+];
+
+const MS_PER_DAY = 86_400_000;
+
+export function getUtcDayKey(nowMs: number = Date.now()): string {
+  return new Date(nowMs).toISOString().slice(0, 10);
+}
+
+export function getDailyChallengeForDate(nowMs: number = Date.now()): {
+  challenge: DailyRomanticChallenge;
+  dayKey: string;
+  msUntilReset: number;
+} {
+  const dayIndex = Math.floor(nowMs / MS_PER_DAY);
+  const dayKey = getUtcDayKey(nowMs);
+  const nextResetMs = (dayIndex + 1) * MS_PER_DAY;
+  const challenge = DAILY_ROMANTIC_CHALLENGES[dayIndex % DAILY_ROMANTIC_CHALLENGES.length];
+  return {
+    challenge,
+    dayKey,
+    msUntilReset: Math.max(0, nextResetMs - nowMs),
+  };
+}
 
 export const WORLD_SIZE = 96; // 96x96 meter village area
 export const SNOW_GRID_RES = 96; // 1 meter per snow cell

@@ -5,7 +5,7 @@
  */
 
 import React from 'react';
-import { Award, BookOpen, Heart, Radio, Settings, Sparkles, Volume2, VolumeX } from 'lucide-react';
+import { Award, BookOpen, CalendarHeart, Heart, Radio, Settings, Sparkles, Volume2, VolumeX } from 'lucide-react';
 import { synthAudio } from '../audio/synthAudio';
 
 interface TitleScreenProps {
@@ -14,6 +14,7 @@ interface TitleScreenProps {
   onToggleMute: () => void;
   onOpenDispatchRadio?: () => void;
   onOpenWinterPass?: () => void;
+  onOpenDailyChallenge?: () => void;
   onOpenScrapbook: () => void;
   onOpenSettings: () => void;
 }
@@ -24,6 +25,7 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
   onToggleMute,
   onOpenDispatchRadio,
   onOpenWinterPass,
+  onOpenDailyChallenge,
   onOpenScrapbook,
   onOpenSettings,
 }) => {
@@ -54,6 +56,16 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
             >
               <Award className="w-3.5 h-3.5 text-amber-400" />
               <span>Pass</span>
+            </button>
+          )}
+
+          {onOpenDailyChallenge && (
+            <button
+              onClick={onOpenDailyChallenge}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-slate-900/80 border border-slate-700/60 hover:bg-slate-800 text-xs text-rose-300 transition-colors cursor-pointer"
+            >
+              <CalendarHeart className="w-3.5 h-3.5 text-rose-400" />
+              <span>Daily</span>
             </button>
           )}
 

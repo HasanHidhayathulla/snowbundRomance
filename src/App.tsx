@@ -5,6 +5,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { synthAudio } from './audio/synthAudio';
+import { DailyChallengeModal } from './components/DailyChallengeModal';
 import { DispatchRadioModal } from './components/DispatchRadioModal';
 import { GameHUD } from './components/GameHUD';
 import { PauseModal } from './components/PauseModal';
@@ -15,7 +16,7 @@ import { ShopModal } from './components/ShopModal';
 import { TitleScreen } from './components/TitleScreen';
 import { VictoryModal } from './components/VictoryModal';
 import { WinterPassModal } from './components/WinterPassModal';
-import { ACHIEVEMENTS, LANDMARKS, ROMANTIC_GIFTS, WEATHER_CONDITIONS } from './game/constants';
+import { ACHIEVEMENTS, LANDMARKS, ROMANTIC_GIFTS, WEATHER_CONDITIONS, getDailyChallengeForDate } from './game/constants';
 import { SnowPlowGameEngine, type GameHUDStats } from './game/engine';
 import {
   clearGameData,
@@ -81,13 +82,39 @@ export default function App() {
     winterPassLevel: 0,
     claimedPassTierIds: [],
     unclaimedPassRewardsCount: 0,
+    dailyChallenge: (() => {
+      const initial = getDailyChallengeForDate();
+      const steps =
+        initial.challenge.category === 'snow_pattern' && initial.challenge.patternPoints
+          ? initial.challenge.patternPoints.map((pt) => ({ ...pt, completed: false }))
+          : (initial.challenge.requiredLandmarkIds || [])
+              .map((id) => LANDMARKS.find((l) => l.id === id))
+              .filter((l): l is NonNullable<typeof l> => Boolean(l))
+              .map((l) => ({ id: l.id, label: l.name, x: l.x, z: l.z, completed: false }));
+      return {
+        challenge: initial.challenge,
+        dayKey: initial.dayKey,
+        msUntilReset: initial.msUntilReset,
+        steps,
+        completedCount: 0,
+        totalCount: steps.length,
+        completed: false,
+      };
+    })(),
   });
+
+  const returnStateRef = useRef<'TITLE' | 'PLAYING'>('TITLE');
 
   useEffect(() => {
     if (!canvasMountRef.current) return;
 
     // Initialize 3D Engine once inside isolated container
     const engine = new SnowPlowGameEngine(canvasMountRef.current, (newStats) => {
+      if (newStats.gameState === 'TITLE') {
+        returnStateRef.current = 'TITLE';
+      } else if (newStats.gameState === 'PLAYING') {
+        returnStateRef.current = 'PLAYING';
+      }
       setStats(newStats);
       if (newStats.comboMultiplier > highestCombo) {
         setHighestCombo(newStats.comboMultiplier);
@@ -155,6 +182,12 @@ export default function App() {
     const engine = getEngine('handleOpenWinterPass');
     if (!engine) return;
     engine.setGameState('WINTER_PASS');
+  };
+
+  const handleOpenDailyChallenge = () => {
+    const engine = getEngine('handleOpenDailyChallenge');
+    if (!engine) return;
+    engine.setGameState('DAILY_CHALLENGE');
   };
 
   const handleClaimPassTierReward = (tierLevel: number) => {
@@ -306,6 +339,7 @@ export default function App() {
           onToggleMute={handleToggleMute}
           onOpenDispatchRadio={handleOpenDispatchRadio}
           onOpenWinterPass={handleOpenWinterPass}
+          onOpenDailyChallenge={handleOpenDailyChallenge}
           onOpenScrapbook={handleOpenScrapbook}
           onOpenSettings={handleOpenSettings}
         />
@@ -320,6 +354,7 @@ export default function App() {
           onOpenPhotoMode={handleOpenPhotoMode}
           onOpenDispatchRadio={handleOpenDispatchRadio}
           onOpenWinterPass={handleOpenWinterPass}
+          onOpenDailyChallenge={handleOpenDailyChallenge}
           onOpenSettings={handleOpenSettings}
           onPause={handlePause}
           onCycleRadio={handleCycleRadio}
@@ -368,6 +403,7 @@ export default function App() {
           onOpenWorkshop={handleOpenWorkshop}
           onOpenDispatchRadio={handleOpenDispatchRadio}
           onOpenWinterPass={handleOpenWinterPass}
+          onOpenDailyChallenge={handleOpenDailyChallenge}
           onOpenScrapbook={handleOpenScrapbook}
           onOpenPhotoMode={handleOpenPhotoMode}
           onOpenSettings={handleOpenSettings}
@@ -395,6 +431,16 @@ export default function App() {
           claimedPassTierIds={stats.claimedPassTierIds}
           onClaimTierReward={handleClaimPassTierReward}
           onClose={handleResume}
+        />
+      )}
+
+      {/* 3.9 Daily Romantic Challenge Modal */}
+      {stats.gameState === 'DAILY_CHALLENGE' && (
+        <DailyChallengeModal
+          dailyChallenge={stats.dailyChallenge}
+          playerX={stats.playerX}
+          playerZ={stats.playerZ}
+          onClose={returnStateRef.current === 'PLAYING' ? handleResume : handleReturnToTitle}
         />
       )}
 

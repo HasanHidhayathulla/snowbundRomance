@@ -20,6 +20,9 @@ import {
   WEATHER_CONDITIONS,
   WINTER_PASS_TIERS,
   WORLD_SIZE,
+  getDailyChallengeForDate,
+  getUtcDayKey,
+  type DailyRomanticChallenge,
   type GameState,
   type Landmark,
   type RadioStation,
@@ -57,6 +60,24 @@ export interface ActiveQuestState {
   remainingSec: number;
   distanceToTarget: number;
   progressPercent: number;
+}
+
+export interface DailyChallengeStep {
+  id: string;
+  label: string;
+  x: number;
+  z: number;
+  completed: boolean;
+}
+
+export interface DailyChallengeStatus {
+  challenge: DailyRomanticChallenge;
+  dayKey: string;
+  msUntilReset: number;
+  steps: DailyChallengeStep[];
+  completedCount: number;
+  totalCount: number;
+  completed: boolean;
 }
 
 export interface GameHUDStats {
@@ -97,6 +118,7 @@ export interface GameHUDStats {
   winterPassLevel: number;
   claimedPassTierIds: number[];
   unclaimedPassRewardsCount: number;
+  dailyChallenge: DailyChallengeStatus;
 }
 
 import {
@@ -128,6 +150,7 @@ export class SnowPlowGameEngine {
   private tractorBodyMesh!: THREE.Mesh;
   private tractorRoofMesh!: THREE.Mesh;
   private tractorEmblemMesh!: THREE.Mesh;
+  private comboFlashLight!: THREE.PointLight;
 
   // Lighting References for Atmosphere
   private hemiLight!: THREE.HemisphereLight;
@@ -186,6 +209,15 @@ export class SnowPlowGameEngine {
   private claimedPassTierIds: number[] = [];
   private blizzardContinuousTimer: number = 0;
 
+  // Daily Romantic Challenge State (rotates every 24h UTC)
+  private dailyChallenge!: DailyRomanticChallenge;
+  private dailyDayKey: string = '';
+  private dailyCompletedStepIds: string[] = [];
+  private dailyCompleted: boolean = false;
+  private dailyGuideGroup!: THREE.Group;
+  private dailyStepMeshes: Map<string, THREE.Group> = new Map();
+  private dailySyncTimer: number = 0;
+
   // World Elements
   private landmarks: Landmark[] = [];
   private landmarkMeshes: Map<string, THREE.Group> = new Map();
@@ -235,7 +267,9 @@ export class SnowPlowGameEngine {
     this.initScene();
     this.applyAtmosphere(this.atmosphere);
     this.initWorldEntities();
+    this.initDailyChallenge();
     this.setupEventListeners();
+    this.pushHUDUpdate();
     this.startLoop();
   }
 
@@ -345,6 +379,9 @@ export class SnowPlowGameEngine {
     this.tractorEmblemMesh = tractorData.emblemMesh;
 
     this.tractorGroup.position.set(0, 0, 0);
+    this.comboFlashLight = new THREE.PointLight(0xf472b6, 0, 14, 1.6);
+    this.comboFlashLight.position.set(0, 2.2, 0);
+    this.tractorGroup.add(this.comboFlashLight);
     this.scene.add(this.tractorGroup);
 
     // 5. Waypoint / Quest Beacon Mesh
@@ -517,6 +554,250 @@ export class SnowPlowGameEngine {
     });
   }
 
+  private initDailyChallenge(isRollover: boolean = false) {
+    const { challenge, dayKey } = getDailyChallengeForDate();
+    this.dailyChallenge = challenge;
+    this.dailyDayKey = dayKey;
+
+    const saved = loadGameProgress();
+    const savedDaily = saved.dailyChallenge;
+    if (!isRollover && savedDaily && savedDaily.dayKey === dayKey && savedDaily.challengeId === challenge.id) {
+      this.dailyCompletedStepIds = [...(savedDaily.completedStepIds || [])];
+      this.dailyCompleted = Boolean(savedDaily.completed);
+    } else {
+      this.dailyCompletedStepIds = [];
+      this.dailyCompleted = false;
+      saveGameProgress({
+        dailyChallenge: {
+          dayKey,
+          challengeId: challenge.id,
+          completedStepIds: [],
+          completed: false,
+        },
+      });
+      if (isRollover) {
+        this.triggerMessage(`New Daily Romantic Challenge: "${challenge.title}" (+${challenge.rewardLetters} Letters)`);
+      }
+    }
+
+    this.buildDailyGuideMeshes();
+  }
+
+  private getDailyChallengeSteps(): DailyChallengeStep[] {
+    if (this.dailyChallenge.category === 'snow_pattern' && this.dailyChallenge.patternPoints) {
+      return this.dailyChallenge.patternPoints.map((pt) => ({
+        id: pt.id,
+        label: pt.label,
+        x: pt.x,
+        z: pt.z,
+        completed: this.dailyCompletedStepIds.includes(pt.id),
+      }));
+    }
+
+    const reqIds = this.dailyChallenge.requiredLandmarkIds || [];
+    return reqIds
+      .map((lmId) => LANDMARKS.find((l) => l.id === lmId))
+      .filter((lm): lm is NonNullable<typeof lm> => Boolean(lm))
+      .map((lm) => ({
+        id: lm.id,
+        label: lm.name,
+        x: lm.x,
+        z: lm.z,
+        completed: this.dailyCompletedStepIds.includes(lm.id),
+      }));
+  }
+
+  private buildDailyGuideMeshes() {
+    if (this.dailyGuideGroup) {
+      this.scene.remove(this.dailyGuideGroup);
+      this.dailyGuideGroup.traverse((obj) => {
+        if ((obj as THREE.Mesh).geometry) (obj as THREE.Mesh).geometry.dispose();
+        const mat = (obj as THREE.Mesh).material;
+        if (Array.isArray(mat)) mat.forEach((m) => m.dispose());
+        else if (mat) mat.dispose();
+      });
+    }
+
+    this.dailyGuideGroup = new THREE.Group();
+    this.dailyStepMeshes.clear();
+
+    const steps = this.getDailyChallengeSteps();
+    if (this.dailyCompleted || steps.length === 0) {
+      this.dailyGuideGroup.visible = false;
+      this.scene.add(this.dailyGuideGroup);
+      return;
+    }
+
+    // For snow patterns, trace a subtle glowing rose-gold guide loop on the snow
+    if (this.dailyChallenge.category === 'snow_pattern' && steps.length >= 2) {
+      const linePts = steps.map((s) => new THREE.Vector3(s.x, 0.08, s.z));
+      if (this.dailyChallenge.patternName !== 'Infinity Waltz') {
+        linePts.push(new THREE.Vector3(steps[0].x, 0.08, steps[0].z));
+      }
+      const lineGeo = new THREE.BufferGeometry().setFromPoints(linePts);
+      const lineMat = new THREE.LineBasicMaterial({
+        color: 0xf472b6,
+        transparent: true,
+        opacity: 0.45,
+      });
+      const guideLine = new THREE.Line(lineGeo, lineMat);
+      this.dailyGuideGroup.add(guideLine);
+    }
+
+    steps.forEach((step) => {
+      const markerGroup = new THREE.Group();
+      markerGroup.position.set(step.x, 0, step.z);
+      markerGroup.visible = !step.completed;
+
+      const ringGeo = new THREE.RingGeometry(1.5, 1.95, 28);
+      ringGeo.rotateX(-Math.PI / 2);
+      const ringMat = new THREE.MeshBasicMaterial({
+        color: 0xfb7185,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.78,
+      });
+      const ring = new THREE.Mesh(ringGeo, ringMat);
+      ring.position.y = 0.09;
+      markerGroup.add(ring);
+
+      const gemGeo = new THREE.OctahedronGeometry(0.42, 0);
+      const gemMat = new THREE.MeshStandardMaterial({
+        color: 0xf43f5e,
+        emissive: 0xe11d48,
+        emissiveIntensity: 1.1,
+        roughness: 0.2,
+      });
+      const gem = new THREE.Mesh(gemGeo, gemMat);
+      gem.position.y = 2.4;
+      markerGroup.add(gem);
+
+      this.dailyGuideGroup.add(markerGroup);
+      this.dailyStepMeshes.set(step.id, markerGroup);
+    });
+
+    this.scene.add(this.dailyGuideGroup);
+  }
+
+  private getDailyChallengeStatus(): DailyChallengeStatus {
+    const { msUntilReset } = getDailyChallengeForDate();
+    const steps = this.getDailyChallengeSteps();
+    const completedCount = steps.filter((s) => s.completed).length;
+    return {
+      challenge: this.dailyChallenge,
+      dayKey: this.dailyDayKey,
+      msUntilReset,
+      steps,
+      completedCount,
+      totalCount: steps.length,
+      completed: this.dailyCompleted,
+    };
+  }
+
+  private updateDailyChallengeProgress(dt: number, bladeWorldX: number, bladeWorldZ: number) {
+    // Check 24h UTC rollover periodically
+    this.dailySyncTimer += dt;
+    if (this.dailySyncTimer >= 2.0) {
+      this.dailySyncTimer = 0;
+      if (getUtcDayKey() !== this.dailyDayKey) {
+        this.initDailyChallenge(true);
+        this.pushHUDUpdate();
+        return;
+      }
+    }
+
+    if (this.dailyCompleted) return;
+
+    // Animate visible step markers
+    const nowSec = performance.now() * 0.004;
+    let idx = 0;
+    this.dailyStepMeshes.forEach((group) => {
+      if (group.visible) {
+        const gem = group.children[1];
+        if (gem) {
+          gem.position.y = 2.4 + Math.sin(nowSec + idx * 0.8) * 0.25;
+          gem.rotation.y += 1.6 * dt;
+        }
+      }
+      idx++;
+    });
+
+    const steps = this.getDailyChallengeSteps();
+    let changed = false;
+
+    for (const step of steps) {
+      if (step.completed) continue;
+
+      let stepReached = false;
+      if (this.dailyChallenge.category === 'landmark_visit') {
+        const lm = LANDMARKS.find((l) => l.id === step.id);
+        const visitRadius = (lm ? lm.radius : 6.5) + 1.5;
+        const dist = Math.hypot(step.x - this.posX, step.z - this.posZ);
+        stepReached = dist <= visitRadius;
+      } else {
+        const distTractor = Math.hypot(step.x - this.posX, step.z - this.posZ);
+        const distBlade = Math.hypot(step.x - bladeWorldX, step.z - bladeWorldZ);
+        stepReached = Math.min(distTractor, distBlade) <= 3.3 && Math.abs(this.speed) > 0.25;
+      }
+
+      if (stepReached) {
+        this.dailyCompletedStepIds.push(step.id);
+        const marker = this.dailyStepMeshes.get(step.id);
+        if (marker) marker.visible = false;
+        this.particles.emitRomanticHearts(step.x, 1.2, step.z, 12);
+        changed = true;
+      }
+    }
+
+    if (!changed) return;
+
+    const updatedSteps = this.getDailyChallengeSteps();
+    const doneCount = updatedSteps.filter((s) => s.completed).length;
+
+    if (doneCount >= updatedSteps.length && updatedSteps.length > 0) {
+      this.dailyCompleted = true;
+      if (this.dailyGuideGroup) this.dailyGuideGroup.visible = false;
+
+      this.loveLetters += this.dailyChallenge.rewardLetters;
+      this.addWinterPassXp(this.dailyChallenge.rewardPassXp);
+      const prevCount = loadGameProgress().dailyChallengesCompletedCount || 0;
+
+      saveGameProgress({
+        loveLetters: this.loveLetters,
+        dailyChallengesCompletedCount: prevCount + 1,
+        dailyChallenge: {
+          dayKey: this.dailyDayKey,
+          challengeId: this.dailyChallenge.id,
+          completedStepIds: [...this.dailyCompletedStepIds],
+          completed: true,
+        },
+      });
+
+      this.checkAchievement('daily_devotion');
+      synthAudio.playLandmarkReunion();
+      this.particles.emitRomanticHearts(this.posX, 1.8, this.posZ, 28);
+      this.cameraShakeIntensity = 0.25;
+      this.triggerMessage(
+        `Daily Challenge Complete: ${this.dailyChallenge.title}! (+${this.dailyChallenge.rewardLetters} Letters)`
+      );
+    } else {
+      synthAudio.playComboChime(3);
+      saveGameProgress({
+        dailyChallenge: {
+          dayKey: this.dailyDayKey,
+          challengeId: this.dailyChallenge.id,
+          completedStepIds: [...this.dailyCompletedStepIds],
+          completed: false,
+        },
+      });
+      this.triggerMessage(
+        `Daily Challenge (${doneCount}/${updatedSteps.length}): ${this.dailyChallenge.title}`
+      );
+    }
+
+    this.pushHUDUpdate();
+  }
+
   private setupEventListeners() {
     window.addEventListener('keydown', (e) => {
       this.keysHeld[e.code] = true;
@@ -582,6 +863,13 @@ export class SnowPlowGameEngine {
         if (this.gameState === 'PLAYING') {
           this.setGameState('WINTER_PASS');
         } else if (this.gameState === 'WINTER_PASS') {
+          this.setGameState('PLAYING');
+        }
+      }
+      if (e.code === 'KeyC') {
+        if (this.gameState === 'PLAYING') {
+          this.setGameState('DAILY_CHALLENGE');
+        } else if (this.gameState === 'DAILY_CHALLENGE') {
           this.setGameState('PLAYING');
         }
       }
@@ -720,6 +1008,9 @@ export class SnowPlowGameEngine {
   }
 
   public setGameState(state: GameState) {
+    if (state === 'DAILY_CHALLENGE' && getUtcDayKey() !== this.dailyDayKey) {
+      this.initDailyChallenge(true);
+    }
     this.gameState = state;
     if (state === 'PLAYING') {
       synthAudio.resume();
@@ -1041,7 +1332,15 @@ export class SnowPlowGameEngine {
 
     if (this.gameState !== 'PLAYING') {
       synthAudio.updateVehicleAudio(0, false, false);
+      if (this.comboFlashLight && this.comboFlashLight.intensity > 0) {
+        this.comboFlashLight.intensity = 0;
+      }
       return;
+    }
+
+    if (this.comboFlashLight && this.comboFlashLight.intensity > 0.01) {
+      this.comboFlashLight.intensity *= Math.pow(0.02, dt);
+      if (this.comboFlashLight.intensity < 0.05) this.comboFlashLight.intensity = 0;
     }
 
     // 1. Process Inputs (Continuous Held Keys + Virtual Inputs)
@@ -1245,11 +1544,20 @@ export class SnowPlowGameEngine {
             synthAudio.playComboChime(this.comboLevel);
           }
 
-          this.particles.emitRomanticHearts(this.posX, 1.2, this.posZ, 6 + this.comboLevel * 2);
-          this.cameraShakeIntensity = 0.15;
+          const currentCombo = COMBO_LEVELS[this.comboLevel - 1];
+          this.particles.emitComboMilestoneBurst(
+            this.posX,
+            0.3,
+            this.posZ,
+            this.comboLevel,
+            currentCombo.color
+          );
+          this.comboFlashLight.color.set(currentCombo.color);
+          this.comboFlashLight.intensity = 4.5 + this.comboLevel * 0.6;
+          this.squashStretchY = 1.24;
+          this.cameraShakeIntensity = 0.14 + this.comboLevel * 0.025;
 
           // Gain love letters on combo progression
-          const currentCombo = COMBO_LEVELS[this.comboLevel - 1];
           const lettersGained = Math.round(5 * currentCombo.multiplier);
           this.loveLetters += lettersGained;
           this.addWinterPassXp(Math.round(15 * currentCombo.multiplier));
@@ -1257,10 +1565,14 @@ export class SnowPlowGameEngine {
           this.triggerMessage(`${currentCombo.title}! Combo x${currentCombo.multiplier.toFixed(1)} (+${lettersGained} Letters)`);
         } else {
           // Sustained Max Combo (Level 8): rotate encore romantic audio clips
+          const maxCombo = COMBO_LEVELS[COMBO_LEVELS.length - 1];
           this.comboClipTitle = synthAudio.playHighComboClip(8, this.comboEncoreCount++);
           this.comboClipTimer = 2.6;
-          this.particles.emitRomanticHearts(this.posX, 1.2, this.posZ, 20);
-          this.cameraShakeIntensity = 0.12;
+          this.particles.emitComboMilestoneBurst(this.posX, 0.3, this.posZ, 8, maxCombo.color);
+          this.comboFlashLight.color.set(maxCombo.color);
+          this.comboFlashLight.intensity = 8.0;
+          this.squashStretchY = 1.26;
+          this.cameraShakeIntensity = 0.2;
           const encoreLetters = 25;
           this.loveLetters += encoreLetters;
           this.addWinterPassXp(60);
@@ -1437,6 +1749,9 @@ export class SnowPlowGameEngine {
       this.triggerMessage('Grand Solstice Reached! The whole village is reunited in love!');
     }
 
+    // 6. Daily Romantic Challenge Tracking (24h Rotating)
+    this.updateDailyChallengeProgress(dt, bladeWorldX, bladeWorldZ);
+
     // Push periodically to HUD without overloading React
     const now = performance.now();
     if (now - this.lastHUDPushTime > 80) {
@@ -1559,6 +1874,7 @@ export class SnowPlowGameEngine {
       winterPassLevel: currentLevel,
       claimedPassTierIds: [...this.claimedPassTierIds],
       unclaimedPassRewardsCount: unclaimedCount,
+      dailyChallenge: this.getDailyChallengeStatus(),
     });
   }
 
@@ -1612,6 +1928,7 @@ export class SnowPlowGameEngine {
       winterPassLevel: currentLevel,
       claimedPassTierIds: [...this.claimedPassTierIds],
       unclaimedPassRewardsCount: unclaimedCount,
+      dailyChallenge: this.getDailyChallengeStatus(),
     };
   }
 
@@ -1657,6 +1974,7 @@ export class SnowPlowGameEngine {
     this.tractorGroup.position.set(0, 0, 0);
     this.tractorGroup.rotation.y = Math.PI;
     this.tractorGroup.scale.set(1, 1, 1);
+    if (this.comboFlashLight) this.comboFlashLight.intensity = 0;
 
     // Clear active dispatch quest if any
     this.activeQuest = null;

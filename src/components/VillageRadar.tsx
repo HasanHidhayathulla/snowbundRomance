@@ -33,6 +33,7 @@ interface VillageRadarProps {
   gifts: RadarGift[];
   snowClearedPercent: number;
   activeQuestTarget?: { x: number; z: number; title: string } | null;
+  dailyTargets?: Array<{ id: string; x: number; z: number; completed: boolean }>;
 }
 
 export const VillageRadar: React.FC<VillageRadarProps> = ({
@@ -43,6 +44,7 @@ export const VillageRadar: React.FC<VillageRadarProps> = ({
   gifts,
   snowClearedPercent,
   activeQuestTarget,
+  dailyTargets = [],
 }) => {
   const [isMinimized, setIsMinimized] = useState(false);
 
@@ -115,6 +117,24 @@ export const VillageRadar: React.FC<VillageRadarProps> = ({
 
         {/* SVG Marker Layer with explicit viewBox */}
         <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full">
+          {/* Daily Challenge Pending Waypoints */}
+          {dailyTargets
+            .filter((t) => !t.completed)
+            .map((t) => {
+              const dx = mapToPercent(t.x);
+              const dz = mapToPercent(t.z);
+              return (
+                <g key={`daily-${t.id}`} transform={`translate(${dx}, ${dz})`}>
+                  <polygon
+                    points="0,-3 3,0 0,3 -3,0"
+                    fill="#fb7185"
+                    stroke="#fff1f2"
+                    strokeWidth="0.6"
+                  />
+                </g>
+              );
+            })}
+
           {/* Active Quest Target Waypoint */}
           {activeQuestTarget && (() => {
             const qx = mapToPercent(activeQuestTarget.x);

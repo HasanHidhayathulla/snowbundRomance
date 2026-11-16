@@ -322,6 +322,27 @@ export default function App() {
     engine.setVirtualInput(throttle, steer, boost);
   };
 
+  const getWeatherOverlayClass = (): string => {
+    const weatherId = stats.weather.id;
+    const isGoldenSky = stats.atmosphere === 'golden';
+
+    if (weatherId === 'heavy_blizzard') {
+      return 'bg-sky-900/25 shadow-[inset_0_0_120px_rgba(125,211,252,0.28)]';
+    }
+    if (weatherId === 'clear_aurora') {
+      return isGoldenSky
+        ? 'bg-amber-400/15 shadow-[inset_0_0_100px_rgba(251,191,36,0.24)]'
+        : 'bg-emerald-500/10 shadow-[inset_0_0_110px_rgba(52,211,153,0.18)]';
+    }
+    if (weatherId === 'starlight_freeze') {
+      return 'bg-indigo-950/20 shadow-[inset_0_0_110px_rgba(167,139,250,0.2)]';
+    }
+    // gentle_flurry
+    return isGoldenSky
+      ? 'bg-amber-400/10 shadow-[inset_0_0_90px_rgba(251,191,36,0.18)]'
+      : 'bg-cyan-500/8 shadow-[inset_0_0_90px_rgba(56,189,248,0.14)]';
+  };
+
   return (
     <div className="relative w-screen h-screen overflow-hidden bg-slate-950 font-sans select-none">
       {/* 1. Isolated WebGL 3D Canvas Mount Point */}
@@ -329,6 +350,12 @@ export default function App() {
         ref={canvasMountRef}
         className="absolute inset-0 w-full h-full"
         style={{ touchAction: 'none' }}
+      />
+
+      {/* 1.5 Weather-Reactive Atmospheric Tint Overlay */}
+      <div
+        aria-hidden="true"
+        className={`absolute inset-0 pointer-events-none transition-all duration-1000 ${getWeatherOverlayClass()}`}
       />
 
       {/* 2. Title Screen Overlay */}

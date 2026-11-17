@@ -301,6 +301,33 @@ export class SnowGridSystem {
   }
 
   /**
+   * Stamp a crisp heart-shaped tire tread imprint into the snow blanket mask
+   */
+  public stampHeartTread(wx: number, wz: number, angle: number, radiusMeters: number = 0.42) {
+    const halfWorld = WORLD_SIZE / 2;
+    const texSize = this.canvas.width;
+    const cx = ((wx + halfWorld) / WORLD_SIZE) * texSize;
+    const cy = ((wz + halfWorld) / WORLD_SIZE) * texSize;
+    const r = (radiusMeters / WORLD_SIZE) * texSize;
+
+    this.ctx.save();
+    this.ctx.globalCompositeOperation = 'destination-out';
+    this.ctx.translate(cx, cy);
+    this.ctx.rotate(-angle);
+
+    // Draw heart silhouette pointing in travel direction (+Z before rotation)
+    this.ctx.beginPath();
+    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
+    this.ctx.moveTo(0, r * 0.85);
+    this.ctx.bezierCurveTo(r * 1.15, r * 0.15, r * 0.95, -r * 0.85, 0, -r * 0.28);
+    this.ctx.bezierCurveTo(-r * 0.95, -r * 0.85, -r * 1.15, r * 0.15, 0, r * 0.85);
+    this.ctx.closePath();
+    this.ctx.fill();
+    this.ctx.restore();
+    this.snowTexture.needsUpdate = true;
+  }
+
+  /**
    * Check snow depth at a given world position
    */
   public getSnowDepthAt(wx: number, wz: number): number {

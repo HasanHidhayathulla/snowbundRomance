@@ -7,6 +7,26 @@
 
 import * as THREE from 'three';
 
+const _treadPos = new THREE.Vector3();
+const _treadQuat = new THREE.Quaternion();
+const _treadScale = new THREE.Vector3();
+const _treadMat4 = new THREE.Matrix4();
+const _treadUp = new THREE.Vector3(0, 1, 0);
+const _treadColor = new THREE.Color();
+
+interface DriftTreadStamp {
+  active: boolean;
+  age: number;
+  maxLife: number;
+  x: number;
+  z: number;
+  rotation: number;
+  baseScale: number;
+  r: number;
+  g: number;
+  b: number;
+}
+
 interface Particle {
   active: boolean;
   x: number;
@@ -70,10 +90,18 @@ export class ParticleSystem {
   // Procedural Canvas Textures
   private circleTexture: THREE.CanvasTexture;
   private heartTexture: THREE.CanvasTexture;
+  private treadTexture: THREE.CanvasTexture;
+
+  // Instanced Heart-Shaped & Sparkling Drift-Boost Tread Trail
+  private maxTreadStamps = 240;
+  private treadStamps: DriftTreadStamp[] = [];
+  private treadMesh: THREE.InstancedMesh;
+  private treadCursor: number = 0;
 
   constructor(scene: THREE.Scene) {
     this.circleTexture = this.createCircleTexture();
     this.heartTexture = this.createHeartTexture();
+    this.treadTexture = this.createHeartTreadTexture();
 
     // 1. Dynamic action particles (plow spray, exhaust puffs)
     this.positions = new Float32Array(this.maxParticles * 3);
@@ -216,6 +244,44 @@ export class ParticleSystem {
 
     this.snowMesh = new THREE.Points(snowGeo, snowMat);
     scene.add(this.snowMesh);
+
+    // 5. Instanced Heart-Shaped & Sparkling Tire Tread Trail
+    const treadGeo = new THREE.PlaneGeometry(0.76, 0.76);
+    treadGeo.rotateX(-Math.PI / 2);
+    const treadMat = new THREE.MeshBasicMaterial({
+      map: this.treadTexture,
+      transparent: true,
+      opacity: 0.92,
+      depthWrite: false,
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+      polygonOffsetUnits: -2,
+    });
+    this.treadMesh = new THREE.InstancedMesh(treadGeo, treadMat, this.maxTreadStamps);
+    this.treadMesh.frustumCulled = false;
+    this.treadMesh.renderOrder = 3;
+
+    for (let i = 0; i < this.maxTreadStamps; i++) {
+      this.treadStamps.push({
+        active: false,
+        age: 0,
+        maxLife: 5.5,
+        x: 0,
+        z: 0,
+        rotation: 0,
+        baseScale: 1,
+        r: 1,
+        g: 1,
+        b: 1,
+      });
+      _treadMat4.makeScale(0, 0, 0);
+      this.treadMesh.setMatrixAt(i, _treadMat4);
+      _treadColor.setRGB(1, 1, 1);
+      this.treadMesh.setColorAt(i, _treadColor);
+    }
+    this.treadMesh.instanceMatrix.needsUpdate = true;
+    if (this.treadMesh.instanceColor) this.treadMesh.instanceColor.needsUpdate = true;
+    scene.add(this.treadMesh);
   }
 
   private createEmptyParticle(): Particle {
@@ -302,6 +368,70 @@ export class ParticleSystem {
     ctx.fill();
 
     return new THREE.CanvasTexture(canvas);
+  }
+
+  /**
+   * Procedural heart-shaped tire tread with golden inner rim & 4-point star sparkles
+   */
+  private createHeartTreadTexture(): THREE.CanvasTexture {
+    const canvas = document.createElement('canvas');
+    canvas.width = 128;
+    canvas.height = 128;
+    const ctx = canvas.getContext('2d')!;
+
+    // Soft rose-gold glow halo
+    const glow = ctx.createRadialGradient(64, 64, 8, 64, 64, 58);
+    glow.addColorStop(0, 'rgba(251, 113, 133, 0.55)');
+    glow.addColorStop(0.55, 'rgba(244, 63, 94, 0.22)');
+    glow.addColorStop(1, 'rgba(244, 63, 94, 0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, 128, 128);
+
+    // Outer heart tread lug (tip pointing toward bottom = +Z forward)
+    ctx.beginPath();
+    ctx.moveTo(64, 102);
+    ctx.bezierCurveTo(108, 72, 104, 30, 64, 48);
+    ctx.bezierCurveTo(24, 30, 20, 72, 64, 102);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(244, 63, 94, 0.92)';
+    ctx.fill();
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = 'rgba(255, 241, 242, 0.95)';
+    ctx.stroke();
+
+    // Inner bright golden-rose heart core
+    ctx.beginPath();
+    ctx.moveTo(64, 90);
+    ctx.bezierCurveTo(90, 70, 88, 44, 64, 56);
+    ctx.bezierCurveTo(40, 44, 38, 70, 64, 90);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(253, 224, 71, 0.9)';
+    ctx.fill();
+
+    // Helper for 4-point starlight sparkles flanking the tread
+    const drawSparkle = (sx: number, sy: number, size: number, color: string) => {
+      ctx.save();
+      ctx.translate(sx, sy);
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      for (let i = 0; i < 4; i++) {
+        const a = (i * Math.PI) / 2;
+        ctx.lineTo(Math.cos(a) * size, Math.sin(a) * size);
+        ctx.lineTo(Math.cos(a + Math.PI / 4) * (size * 0.28), Math.sin(a + Math.PI / 4) * (size * 0.28));
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    };
+
+    drawSparkle(24, 30, 10, 'rgba(255, 255, 255, 0.95)');
+    drawSparkle(104, 30, 10, 'rgba(103, 232, 249, 0.95)');
+    drawSparkle(22, 96, 8, 'rgba(253, 224, 71, 0.92)');
+    drawSparkle(106, 96, 8, 'rgba(255, 255, 255, 0.92)');
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
   }
 
   /**
@@ -463,6 +593,87 @@ export class ParticleSystem {
         Math.min(1, mix.b * 1.1)
       );
     }
+  }
+
+  /**
+   * Stamp left & right heart-shaped sparkling tire treads + emit starlight wakes during drift boost
+   */
+  public emitDriftBoostTrail(
+    rearLX: number,
+    rearLZ: number,
+    rearRX: number,
+    rearRZ: number,
+    heading: number,
+    isDrifting: boolean,
+    accentHex?: string
+  ) {
+    const scaleMult = isDrifting ? 1.18 : 0.95;
+    const stampWheel = (wx: number, wz: number, tintOffset: number) => {
+      const idx = this.treadCursor;
+      this.treadCursor = (this.treadCursor + 1) % this.maxTreadStamps;
+      const s = this.treadStamps[idx];
+      s.active = true;
+      s.age = 0;
+      s.maxLife = isDrifting ? 6.2 : 5.0;
+      s.x = wx;
+      s.z = wz;
+      s.rotation = heading;
+      s.baseScale = scaleMult;
+
+      if (accentHex && tintOffset % 3 === 2) {
+        _treadColor.set(accentHex).lerp(new THREE.Color(0xffffff), 0.35);
+      } else if (tintOffset % 2 === 0) {
+        _treadColor.setRGB(1.0, 0.85, 0.92);
+      } else {
+        _treadColor.setRGB(1.0, 0.94, 0.78);
+      }
+      s.r = _treadColor.r;
+      s.g = _treadColor.g;
+      s.b = _treadColor.b;
+      this.treadMesh.setColorAt(idx, _treadColor);
+    };
+
+    stampWheel(rearLX, rearLZ, this.treadCursor);
+    stampWheel(rearRX, rearRZ, this.treadCursor + 1);
+    if (this.treadMesh.instanceColor) this.treadMesh.instanceColor.needsUpdate = true;
+
+    // Emit twinkling sparkle & mini-heart kickups from both rear tires
+    const sparkleCount = isDrifting ? 3 : 2;
+    for (let i = 0; i < sparkleCount; i++) {
+      const isLeft = i % 2 === 0;
+      const px = isLeft ? rearLX : rearRX;
+      const pz = isLeft ? rearLZ : rearRZ;
+      const outAngle = heading + Math.PI + (isLeft ? 0.35 : -0.35) + (Math.random() - 0.5) * 0.45;
+      const kickSpeed = (isDrifting ? 2.6 : 1.5) + Math.random() * 1.4;
+      const isCyan = Math.random() > 0.65;
+
+      this.spawnParticle(
+        this.heartParticles,
+        this.maxHeartParticles,
+        px + (Math.random() - 0.5) * 0.2,
+        0.18,
+        pz + (Math.random() - 0.5) * 0.2,
+        Math.sin(outAngle) * kickSpeed,
+        1.4 + Math.random() * 1.5,
+        Math.cos(outAngle) * kickSpeed,
+        isDrifting ? 1.8 : 0.6,
+        3.2,
+        0.92,
+        0.48 + Math.random() * 0.3,
+        isCyan ? 0.55 : 1.0,
+        isCyan ? 0.95 : 0.48,
+        isCyan ? 1.0 : 0.72
+      );
+    }
+  }
+
+  public clearDriftBoostTrails() {
+    for (let i = 0; i < this.maxTreadStamps; i++) {
+      this.treadStamps[i].active = false;
+      _treadMat4.makeScale(0, 0, 0);
+      this.treadMesh.setMatrixAt(i, _treadMat4);
+    }
+    this.treadMesh.instanceMatrix.needsUpdate = true;
   }
 
   /**
@@ -657,6 +868,36 @@ export class ParticleSystem {
     }
 
     snowAttr.needsUpdate = true;
+
+    // 5. Update instanced heart-shaped & sparkling tread stamps
+    let treadDirty = false;
+    for (let i = 0; i < this.maxTreadStamps; i++) {
+      const s = this.treadStamps[i];
+      if (!s.active) continue;
+      treadDirty = true;
+      s.age += dt;
+      if (s.age >= s.maxLife) {
+        s.active = false;
+        _treadMat4.makeScale(0, 0, 0);
+        this.treadMesh.setMatrixAt(i, _treadMat4);
+        continue;
+      }
+
+      const lifeT = s.age / s.maxLife;
+      const popIn = s.age < 0.14 ? 0.65 + (s.age / 0.14) * 0.45 : 1.0;
+      const shimmer = 1.0 + Math.sin(s.age * 11.0 + i) * 0.06;
+      const fadeOut = lifeT > 0.72 ? Math.max(0, 1 - (lifeT - 0.72) / 0.28) : 1.0;
+      const finalScale = s.baseScale * popIn * shimmer * fadeOut;
+
+      _treadPos.set(s.x, 0.056, s.z);
+      _treadQuat.setFromAxisAngle(_treadUp, s.rotation);
+      _treadScale.set(finalScale, 1, finalScale);
+      _treadMat4.compose(_treadPos, _treadQuat, _treadScale);
+      this.treadMesh.setMatrixAt(i, _treadMat4);
+    }
+    if (treadDirty) {
+      this.treadMesh.instanceMatrix.needsUpdate = true;
+    }
   }
 
   public dispose() {
@@ -666,8 +907,11 @@ export class ParticleSystem {
     (this.heartPointsMesh.material as THREE.Material).dispose();
     this.snowMesh.geometry.dispose();
     (this.snowMesh.material as THREE.Material).dispose();
+    this.treadMesh.geometry.dispose();
+    (this.treadMesh.material as THREE.Material).dispose();
     this.circleTexture.dispose();
     this.heartTexture.dispose();
+    this.treadTexture.dispose();
 
     this.sharedRingGeo.dispose();
     this.sharedInnerRingGeo.dispose();

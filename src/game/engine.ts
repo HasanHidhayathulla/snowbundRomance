@@ -178,6 +178,7 @@ export class SnowPlowGameEngine {
   private boostFuel: number = 100;
   private isBoosting: boolean = false;
   private isPlowing: boolean = false;
+  private driftTrailDistAcc: number = 0;
 
   // Input State
   private keysHeld: Record<string, boolean> = {};
@@ -1373,6 +1374,8 @@ export class SnowPlowGameEngine {
     if (this.comboFlashLight) this.comboFlashLight.intensity = 0;
 
     this.snowGrid.resetSnow();
+    this.particles.clearDriftBoostTrails();
+    this.driftTrailDistAcc = 0;
     this.initWorldEntities();
     this.buildDailyGuideMeshes();
     this.saveProgressState();
@@ -1577,12 +1580,14 @@ export class SnowPlowGameEngine {
     const comboWindow = comboTier.statValue;
 
     // Boost consumption & replenishment
+    const wasBoosting = this.isBoosting;
     if (wantsBoost) {
       this.isBoosting = true;
       this.boostFuel = Math.max(0, this.boostFuel - 32 * dt);
       if (Math.random() < 0.15) synthAudio.playBoostStart();
     } else {
       this.isBoosting = false;
+      this.driftTrailDistAcc = 0;
       this.boostFuel = Math.min(100, this.boostFuel + 14 * dt);
     }
 
@@ -1687,6 +1692,36 @@ export class SnowPlowGameEngine {
       this.posZ + Math.cos(this.heading) * 0.8 + 0.8,
       this.isBoosting
     );
+
+    // 2.8 Heart-Shaped & Sparkling Tread Trail during Boost / Drift Boost
+    if (this.isBoosting && Math.abs(this.speed) > 1.0) {
+      const isDrifting = Math.abs(this.steerAngle) > 0.12;
+      const stepDist = isDrifting ? 0.36 : 0.48;
+      this.driftTrailDistAcc += Math.abs(this.speed) * dt;
+
+      if (!wasBoosting || this.driftTrailDistAcc >= stepDist) {
+        this.driftTrailDistAcc = 0;
+        const cosH = Math.cos(this.heading);
+        const sinH = Math.sin(this.heading);
+        // Rear wheels are at local (±0.85, -0.6)
+        const rearLX = this.posX + (-0.85) * cosH + (-0.6) * sinH;
+        const rearLZ = this.posZ - (-0.85) * sinH + (-0.6) * cosH;
+        const rearRX = this.posX + (0.85) * cosH + (-0.6) * sinH;
+        const rearRZ = this.posZ - (0.85) * sinH + (-0.6) * cosH;
+
+        this.particles.emitDriftBoostTrail(
+          rearLX,
+          rearLZ,
+          rearRX,
+          rearRZ,
+          this.heading,
+          isDrifting,
+          this.currentLevel.theme.accentColor
+        );
+        this.snowGrid.stampHeartTread(rearLX, rearLZ, this.heading);
+        this.snowGrid.stampHeartTread(rearRX, rearRZ, this.heading);
+      }
+    }
 
     // 3. Snow Plowing & Carving
     // Position of blade center ahead of tractor
@@ -2203,6 +2238,8 @@ export class SnowPlowGameEngine {
 
     // Replenish fresh snow blanket & mathematical depth grid
     this.snowGrid.resetSnow();
+    this.particles.clearDriftBoostTrails();
+    this.driftTrailDistAcc = 0;
 
     // Reset landmarks & gifts (restore original coordinates for magnet-pulled gifts)
     this.landmarks.forEach((l) => {

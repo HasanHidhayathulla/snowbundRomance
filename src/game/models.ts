@@ -812,3 +812,212 @@ export function createCoupleModel(): THREE.Group {
 
   return group;
 }
+
+/**
+ * Creates a coastal harbor lighthouse with glowing beacon gallery
+ */
+export function createLighthouse(): THREE.Group {
+  const group = new THREE.Group();
+
+  // Stone harbor plinth
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(2.3, 2.7, 0.8, 12), materials.stoneWall);
+  base.position.y = 0.4;
+  base.castShadow = true;
+  base.receiveShadow = true;
+  group.add(base);
+
+  // Striped red & white tower segments
+  const whiteMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.7 });
+  const crimsonMat = new THREE.MeshStandardMaterial({ color: 0xe11d48, roughness: 0.55 });
+
+  const seg1 = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 1.9, 1.6, 12), crimsonMat);
+  seg1.position.y = 1.6;
+  seg1.castShadow = true;
+  group.add(seg1);
+
+  const seg2 = new THREE.Mesh(new THREE.CylinderGeometry(1.35, 1.6, 1.6, 12), whiteMat);
+  seg2.position.y = 3.2;
+  seg2.castShadow = true;
+  group.add(seg2);
+
+  const seg3 = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.35, 1.6, 12), crimsonMat);
+  seg3.position.y = 4.8;
+  seg3.castShadow = true;
+  group.add(seg3);
+
+  // Iron gallery deck
+  const gallery = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.4, 0.25, 14), materials.lampIron);
+  gallery.position.y = 5.7;
+  group.add(gallery);
+
+  // Glowing lantern room
+  const lantern = new THREE.Mesh(new THREE.CylinderGeometry(0.85, 0.85, 1.1, 10), materials.lampLanternGlow);
+  lantern.position.y = 6.35;
+  group.add(lantern);
+
+  // Conical copper-dark cap & finial
+  const cap = new THREE.Mesh(new THREE.ConeGeometry(1.2, 1.2, 12), materials.lampIron);
+  cap.position.y = 7.5;
+  cap.castShadow = true;
+  group.add(cap);
+
+  const finial = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 8), materials.solsticeGold);
+  finial.position.y = 8.2;
+  group.add(finial);
+
+  const beaconLight = new THREE.PointLight(0xfbbf24, 3.0, 18, 1.5);
+  beaconLight.position.y = 6.4;
+  group.add(beaconLight);
+
+  return group;
+}
+
+/**
+ * Creates a stargazing observatory dome with brass telescope barrel
+ */
+export function createObservatoryDome(): THREE.Group {
+  const group = new THREE.Group();
+
+  // Granite circular foundation
+  const plinth = new THREE.Mesh(new THREE.CylinderGeometry(3.2, 3.5, 0.7, 14), materials.stoneWall);
+  plinth.position.y = 0.35;
+  plinth.receiveShadow = true;
+  plinth.castShadow = true;
+  group.add(plinth);
+
+  // Rotunda wall
+  const wallMat = new THREE.MeshStandardMaterial({ color: 0x312e81, roughness: 0.65, metalness: 0.1 });
+  const rotunda = new THREE.Mesh(new THREE.CylinderGeometry(2.5, 2.7, 2.4, 14), wallMat);
+  rotunda.position.y = 1.9;
+  rotunda.castShadow = true;
+  group.add(rotunda);
+
+  // Brass cornice ring
+  const cornice = new THREE.Mesh(new THREE.TorusGeometry(2.55, 0.14, 8, 24), materials.tractorGoldTrim);
+  cornice.rotation.x = Math.PI / 2;
+  cornice.position.y = 3.1;
+  group.add(cornice);
+
+  // Copper/indigo observatory dome
+  const domeMat = new THREE.MeshStandardMaterial({ color: 0x4f46e5, roughness: 0.35, metalness: 0.55 });
+  const dome = new THREE.Mesh(
+    new THREE.SphereGeometry(2.45, 16, 12, 0, Math.PI * 2, 0, Math.PI / 2),
+    domeMat
+  );
+  dome.position.y = 3.1;
+  dome.castShadow = true;
+  group.add(dome);
+
+  // Telescope barrel protruding skyward
+  const scope = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.45, 2.6, 10), materials.tractorGoldTrim);
+  scope.position.set(0, 4.6, 1.5);
+  scope.rotation.x = Math.PI / 4;
+  scope.castShadow = true;
+  group.add(scope);
+
+  // Glowing lens tip
+  const lens = new THREE.Mesh(new THREE.SphereGeometry(0.32, 10, 10), materials.windowGlassGlow);
+  lens.position.set(0, 5.5, 2.4);
+  group.add(lens);
+
+  const starLight = new THREE.PointLight(0xc084fc, 2.5, 16, 1.6);
+  starLight.position.set(0, 5.2, 2.0);
+  group.add(starLight);
+
+  return group;
+}
+
+/**
+ * Creates a glowing aurora ice crystal spire cluster
+ */
+export function createCrystalSpireCluster(scale: number = 1.0): THREE.Group {
+  const group = new THREE.Group();
+
+  const stoneBase = new THREE.Mesh(new THREE.DodecahedronGeometry(1.2, 0), materials.stoneWall);
+  stoneBase.scale.set(1.3, 0.45, 1.3);
+  stoneBase.position.y = 0.25;
+  stoneBase.receiveShadow = true;
+  group.add(stoneBase);
+
+  const crystalMat = new THREE.MeshStandardMaterial({
+    color: 0x34d399,
+    emissive: 0x10b981,
+    emissiveIntensity: 0.75,
+    roughness: 0.15,
+    metalness: 0.25,
+    transparent: true,
+    opacity: 0.9,
+  });
+
+  const spires = [
+    { x: 0, z: 0, h: 3.4, r: 0.55, rx: 0.05, rz: -0.04 },
+    { x: -0.7, z: 0.45, h: 2.3, r: 0.4, rx: 0.2, rz: 0.25 },
+    { x: 0.75, z: -0.35, h: 2.5, r: 0.42, rx: -0.18, rz: -0.22 },
+    { x: 0.2, z: 0.75, h: 1.8, r: 0.32, rx: 0.28, rz: -0.1 },
+  ];
+
+  spires.forEach((s) => {
+    const spire = new THREE.Mesh(new THREE.ConeGeometry(s.r, s.h, 6), crystalMat);
+    spire.position.set(s.x, s.h * 0.48, s.z);
+    spire.rotation.set(s.rx, 0, s.rz);
+    spire.castShadow = true;
+    group.add(spire);
+  });
+
+  const aura = new THREE.PointLight(0x34d399, 2.2, 12, 1.6);
+  aura.position.y = 2.2;
+  group.add(aura);
+
+  group.scale.setScalar(scale);
+  return group;
+}
+
+/**
+ * Creates a grand royal solstice marble fountain with glowing ice spire
+ */
+export function createMarbleFountain(): THREE.Group {
+  const group = new THREE.Group();
+
+  const marbleMat = new THREE.MeshStandardMaterial({ color: 0xfdf2f8, roughness: 0.35, metalness: 0.15 });
+  const iceWaterMat = new THREE.MeshStandardMaterial({
+    color: 0xf472b6,
+    emissive: 0x9d174d,
+    emissiveIntensity: 0.35,
+    roughness: 0.15,
+    metalness: 0.4,
+  });
+
+  // Outer stepped basin
+  const outerRim = new THREE.Mesh(new THREE.CylinderGeometry(3.4, 3.7, 0.65, 16), marbleMat);
+  outerRim.position.y = 0.32;
+  outerRim.receiveShadow = true;
+  outerRim.castShadow = true;
+  group.add(outerRim);
+
+  // Frozen rose-mirror pool surface
+  const pool = new THREE.Mesh(new THREE.CylinderGeometry(3.0, 3.0, 0.1, 16), iceWaterMat);
+  pool.position.y = 0.65;
+  group.add(pool);
+
+  // Center pedestal + upper bowl
+  const column = new THREE.Mesh(new THREE.CylinderGeometry(0.65, 0.9, 1.8, 12), marbleMat);
+  column.position.y = 1.4;
+  column.castShadow = true;
+  group.add(column);
+
+  const upperBowl = new THREE.Mesh(new THREE.CylinderGeometry(1.7, 0.8, 0.45, 14), materials.tractorGoldTrim);
+  upperBowl.position.y = 2.35;
+  upperBowl.castShadow = true;
+  group.add(upperBowl);
+
+  // Crown crystal heart star
+  const crown = new THREE.Mesh(new THREE.OctahedronGeometry(0.75, 0), materials.solsticeGold);
+  crown.position.y = 3.35;
+  group.add(crown);
+
+  const fountainGlow = new THREE.PointLight(0xfbbf24, 2.8, 16, 1.5);
+  fountainGlow.position.y = 3.5;
+  group.add(fountainGlow);
+
+  return group;
+}

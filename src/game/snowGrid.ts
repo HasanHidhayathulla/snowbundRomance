@@ -5,7 +5,7 @@
  */
 
 import * as THREE from 'three';
-import { WORLD_SIZE, SNOW_GRID_RES } from './constants';
+import { WORLD_SIZE, SNOW_GRID_RES, type LevelGroundPattern } from './constants';
 
 export interface PlowingResult {
   cellsClearedThisFrame: number;
@@ -20,6 +20,7 @@ export class SnowGridSystem {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
   private snowTexture: THREE.CanvasTexture;
+  private groundTexture: THREE.CanvasTexture;
 
   // Grid of snow depth (0.0 = completely cleared, 1.0 = deep fresh powder)
   public depthGrid: Float32Array;
@@ -50,15 +51,15 @@ export class SnowGridSystem {
     this.snowTexture.minFilter = THREE.LinearFilter;
     this.snowTexture.magFilter = THREE.LinearFilter;
 
-    // 1. Warm Cobblestone Road Ground Mesh (Underneath)
-    const roadTexture = this.createCobblestoneTexture();
+    // 1. Cleared Ground Mesh (Underneath)
+    this.groundTexture = this.createGroundTexture('cobblestone');
     const groundGeo = new THREE.PlaneGeometry(size + 16, size + 16);
     groundGeo.rotateX(-Math.PI / 2);
     const groundMat = new THREE.MeshStandardMaterial({
-      map: roadTexture,
+      map: this.groundTexture,
       roughness: 0.85,
       metalness: 0.1,
-      color: 0x334155, // Slate cobblestone
+      color: 0x334155,
     });
     this.groundMesh = new THREE.Mesh(groundGeo, groundMat);
     this.groundMesh.position.y = 0.0;
@@ -100,6 +101,27 @@ export class SnowGridSystem {
   }
 
   /**
+   * Swap ground paving pattern and snow tint to match the selected level map
+   */
+  public configureMapTheme(pattern: LevelGroundPattern, groundColor: number, snowTintHex: number) {
+    const nextTex = this.createGroundTexture(pattern);
+    const groundMat = this.groundMesh.material as THREE.MeshStandardMaterial;
+    if (this.groundTexture) {
+      this.groundTexture.dispose();
+    }
+    this.groundTexture = nextTex;
+    groundMat.map = nextTex;
+    groundMat.color.setHex(groundColor);
+    groundMat.roughness = pattern === 'marble' ? 0.55 : pattern === 'boardwalk' ? 0.8 : 0.85;
+    groundMat.metalness = pattern === 'marble' ? 0.2 : 0.1;
+    groundMat.needsUpdate = true;
+
+    const snowMat = this.mesh.material as THREE.MeshStandardMaterial;
+    snowMat.color.setHex(snowTintHex);
+    snowMat.needsUpdate = true;
+  }
+
+  /**
    * Restore full fresh snow blanket across the entire village
    */
   public resetSnow() {
@@ -114,27 +136,72 @@ export class SnowGridSystem {
   }
 
   /**
-   * Generates procedural cobblestone pattern for cleared streets
+   * Generates procedural ground pattern texture for each level theme
    */
-  private createCobblestoneTexture(): THREE.CanvasTexture {
+  private createGroundTexture(pattern: LevelGroundPattern): THREE.CanvasTexture {
     const c = document.createElement('canvas');
     c.width = 256;
     c.height = 256;
     const ctx = c.getContext('2d')!;
 
-    ctx.fillStyle = '#2d3748';
-    ctx.fillRect(0, 0, 256, 256);
-
-    // Draw paving stones
-    ctx.strokeStyle = '#1a202c';
-    ctx.lineWidth = 3;
-
-    for (let y = 0; y < 256; y += 16) {
-      const offsetX = (y / 16) % 2 === 0 ? 0 : 8;
-      for (let x = -8; x < 264; x += 16) {
-        ctx.fillStyle = `hsl(215, 12%, ${24 + ((x * 13 + y * 7) % 12)}%)`;
-        ctx.fillRect(x + offsetX + 1, y + 1, 14, 14);
-        ctx.strokeRect(x + offsetX, y, 16, 16);
+    if (pattern === 'boardwalk') {
+      ctx.fillStyle = '#253244';
+      ctx.fillRect(0, 0, 256, 256);
+      ctx.strokeStyle = '#141d29';
+      ctx.lineWidth = 2;
+      for (let y = 0; y < 256; y += 16) {
+        const shade = 24 + ((y * 7) % 10);
+        ctx.fillStyle = `hsl(212, 22%, ${shade}%)`;
+        ctx.fillRect(0, y + 1, 256, 14);
+        ctx.strokeRect(0, y, 256, 16);
+        for (let x = 0; x < 256; x += 64) {
+          const seamOffset = (y / 16) % 2 === 0 ? 0 : 32;
+          ctx.beginPath();
+          ctx.moveTo((x + seamOffset) % 256, y);
+          ctx.lineTo((x + seamOffset) % 256, y + 16);
+          ctx.stroke();
+        }
+      }
+    } else if (pattern === 'granite') {
+      ctx.fillStyle = '#262038';
+      ctx.fillRect(0, 0, 256, 256);
+      ctx.strokeStyle = '#181326';
+      ctx.lineWidth = 3;
+      for (let y = 0; y < 256; y += 32) {
+        const offsetX = (y / 32) % 2 === 0 ? 0 : 16;
+        for (let x = -16; x < 272; x += 32) {
+          ctx.fillStyle = `hsl(258, 18%, ${22 + ((x * 11 + y * 5) % 10)}%)`;
+          ctx.fillRect(x + offsetX + 2, y + 2, 28, 28);
+          ctx.strokeRect(x + offsetX, y, 32, 32);
+        }
+      }
+    } else if (pattern === 'marble') {
+      ctx.fillStyle = '#3f2e3d';
+      ctx.fillRect(0, 0, 256, 256);
+      ctx.strokeStyle = '#fbbf24';
+      ctx.lineWidth = 2;
+      for (let y = 0; y < 256; y += 32) {
+        for (let x = 0; x < 256; x += 32) {
+          const isAlt = ((x + y) / 32) % 2 === 0;
+          ctx.fillStyle = isAlt ? '#4e3b4c' : '#3a2b38';
+          ctx.fillRect(x + 1, y + 1, 30, 30);
+          ctx.globalAlpha = 0.25;
+          ctx.strokeRect(x, y, 32, 32);
+          ctx.globalAlpha = 1.0;
+        }
+      }
+    } else {
+      ctx.fillStyle = '#2d3748';
+      ctx.fillRect(0, 0, 256, 256);
+      ctx.strokeStyle = '#1a202c';
+      ctx.lineWidth = 3;
+      for (let y = 0; y < 256; y += 16) {
+        const offsetX = (y / 16) % 2 === 0 ? 0 : 8;
+        for (let x = -8; x < 264; x += 16) {
+          ctx.fillStyle = `hsl(215, 12%, ${24 + ((x * 13 + y * 7) % 12)}%)`;
+          ctx.fillRect(x + offsetX + 1, y + 1, 14, 14);
+          ctx.strokeRect(x + offsetX, y, 16, 16);
+        }
       }
     }
 
@@ -320,5 +387,14 @@ export class SnowGridSystem {
 
   public dispose() {
     this.snowTexture.dispose();
+    if (this.groundTexture) {
+      this.groundTexture.dispose();
+    }
+    this.mesh.geometry.dispose();
+    if (Array.isArray(this.mesh.material)) this.mesh.material.forEach((m) => m.dispose());
+    else this.mesh.material.dispose();
+    this.groundMesh.geometry.dispose();
+    if (Array.isArray(this.groundMesh.material)) this.groundMesh.material.forEach((m) => m.dispose());
+    else this.groundMesh.material.dispose();
   }
 }

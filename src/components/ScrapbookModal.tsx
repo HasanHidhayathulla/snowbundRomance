@@ -28,8 +28,6 @@ import {
 } from 'lucide-react';
 import {
   ACHIEVEMENTS,
-  LANDMARKS,
-  ROMANTIC_GIFTS,
   type Landmark,
   type RomanticGift,
 } from '../game/constants';
@@ -177,7 +175,7 @@ export const ScrapbookModal: React.FC<ScrapbookModalProps> = ({
               }`}
             >
               <Gift className="w-3.5 h-3.5" />
-              <span>Solstice Keepsakes ({collectedCount}/{ROMANTIC_GIFTS.length})</span>
+              <span>Solstice Keepsakes ({collectedCount}/{unlockedGifts.length})</span>
             </button>
 
             <button
@@ -189,7 +187,7 @@ export const ScrapbookModal: React.FC<ScrapbookModalProps> = ({
               }`}
             >
               <Heart className="w-3.5 h-3.5" />
-              <span>Reunited Couples ({reunitedCount}/{LANDMARKS.length})</span>
+              <span>Reunited Couples ({reunitedCount}/{clearedLandmarks.length})</span>
             </button>
 
             <button
@@ -287,8 +285,8 @@ export const ScrapbookModal: React.FC<ScrapbookModalProps> = ({
           )}
           {activeTab === 'gifts' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-              {ROMANTIC_GIFTS.map((g) => {
-                const found = unlockedGifts.find((item) => item.id === g.id)?.collected;
+              {unlockedGifts.map((g) => {
+                const found = g.collected;
                 return (
                   <div
                     key={g.id}
@@ -342,8 +340,8 @@ export const ScrapbookModal: React.FC<ScrapbookModalProps> = ({
 
           {activeTab === 'couples' && (
             <div className="flex flex-col gap-3.5">
-              {LANDMARKS.map((lm) => {
-                const isCleared = clearedLandmarks.find((item) => item.id === lm.id)?.cleared;
+              {clearedLandmarks.map((lm) => {
+                const isCleared = lm.cleared;
                 return (
                   <div
                     key={lm.id}

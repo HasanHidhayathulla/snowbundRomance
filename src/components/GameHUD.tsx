@@ -21,6 +21,7 @@ import {
   Heart,
   Landmark,
   Mail,
+  Map as MapIcon,
   Moon,
   Music,
   Pause,
@@ -46,6 +47,7 @@ interface GameHUDProps {
   onOpenDispatchRadio: () => void;
   onOpenWinterPass: () => void;
   onOpenDailyChallenge: () => void;
+  onOpenLevelSelect: () => void;
   onOpenSettings: () => void;
   onPause: () => void;
   onCycleRadio: () => void;
@@ -63,6 +65,7 @@ export const GameHUD: React.FC<GameHUDProps> = ({
   onOpenDispatchRadio,
   onOpenWinterPass,
   onOpenDailyChallenge,
+  onOpenLevelSelect,
   onOpenSettings,
   onPause,
   onCycleRadio,
@@ -80,8 +83,23 @@ export const GameHUD: React.FC<GameHUDProps> = ({
     <div className="absolute inset-0 pointer-events-none select-none flex flex-col justify-between p-4 overflow-hidden">
       {/* 1. TOP PERIMETER STATUS CLUSTER */}
       <div className="w-full flex items-start justify-between gap-4 pointer-events-auto">
-        {/* Top-Left: Snow Clearance & Village Milestones */}
+        {/* Top-Left: Level Badge, Snow Clearance & Village Milestones */}
         <div className="flex flex-col gap-2">
+          {/* Active Level & Map Selector Badge */}
+          <button
+            type="button"
+            onClick={onOpenLevelSelect}
+            className="flex items-center justify-between gap-3 px-3 py-1.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-cyan-500/40 text-xs font-semibold text-cyan-200 shadow-md transition-colors cursor-pointer"
+            title="Switch Level & Topographic Map (M)"
+          >
+            <span className="flex items-center gap-1.5 truncate">
+              <MapIcon className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+              <span className="font-mono text-cyan-300">L{stats.currentLevel.number}</span>
+              <span className="text-white truncate max-w-[140px]">{stats.currentLevel.name}</span>
+            </span>
+            <span className="font-mono text-[10px] text-slate-400 shrink-0">[M]</span>
+          </button>
+
           {/* Snow Cleared Progress Card */}
           <div className="px-3.5 py-2.5 rounded-xl bg-slate-900/90 border border-slate-800 text-slate-100 shadow-md">
             <div className="flex items-center justify-between gap-4 text-xs font-semibold mb-1.5">
@@ -408,6 +426,8 @@ export const GameHUD: React.FC<GameHUDProps> = ({
                     completed: s.completed,
                   }))
             }
+            mapFeatures={stats.currentLevel.mapFeatures}
+            levelName={stats.currentLevel.name}
           />
         </div>
       )}
@@ -534,6 +554,8 @@ export const GameHUD: React.FC<GameHUDProps> = ({
               <span>P Photo</span>
               <span>·</span>
               <span>C Daily</span>
+              <span>·</span>
+              <span>M Maps</span>
               <span>·</span>
               <span>G Atelier</span>
               <span>·</span>

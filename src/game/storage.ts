@@ -32,6 +32,12 @@ export interface DailyChallengeProgress {
   completed: boolean;
 }
 
+export interface LevelSaveData {
+  clearedLandmarkIds: string[];
+  unlockedGiftIds: string[];
+  completedQuestIds: string[];
+}
+
 export interface PersistentProgress {
   loveLetters: number;
   upgrades: Record<string, number>;
@@ -51,6 +57,10 @@ export interface PersistentProgress {
   claimedPassTierIds: number[];
   dailyChallenge?: DailyChallengeProgress;
   dailyChallengesCompletedCount?: number;
+  currentLevelId?: string;
+  unlockedLevelIds?: string[];
+  completedLevelIds?: string[];
+  levelProgress?: Record<string, LevelSaveData>;
   savedPostcards?: SavedPostcard[];
 }
 
@@ -93,6 +103,10 @@ export const DEFAULT_PROGRESS: PersistentProgress = {
   winterPassXp: 0,
   claimedPassTierIds: [],
   dailyChallengesCompletedCount: 0,
+  currentLevelId: 'valentine-valley',
+  unlockedLevelIds: ['valentine-valley'],
+  completedLevelIds: [],
+  levelProgress: {},
 };
 
 export function loadGameSettings(): GameSettings {

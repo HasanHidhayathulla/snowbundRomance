@@ -31,6 +31,7 @@ interface DispatchRadioModalProps {
   activeQuest: ActiveQuestState | null;
   completedQuestIds: string[];
   loveLetters: number;
+  quests?: SolsticeQuest[];
   onSelectRadioStation: (stationId: string) => void;
   onStartQuest: (questId: string) => void;
   onCancelQuest: () => void;
@@ -42,6 +43,7 @@ export const DispatchRadioModal: React.FC<DispatchRadioModalProps> = ({
   activeQuest,
   completedQuestIds,
   loveLetters,
+  quests = SOLSTICE_QUESTS,
   onSelectRadioStation,
   onStartQuest,
   onCancelQuest,
@@ -144,7 +146,7 @@ export const DispatchRadioModal: React.FC<DispatchRadioModalProps> = ({
             <div className="flex items-center justify-between">
               <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
                 <AlertCircle className="w-4 h-4 text-rose-400" />
-                <span>Emergency Village Dispatches ({completedQuestIds.length}/{SOLSTICE_QUESTS.length} Completed)</span>
+                <span>Emergency Region Dispatches ({completedQuestIds.length}/{quests.length} Completed)</span>
               </h4>
               {activeQuest && (
                 <button
@@ -180,7 +182,7 @@ export const DispatchRadioModal: React.FC<DispatchRadioModalProps> = ({
                     onClick={onClose}
                     className="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs shadow-md cursor-pointer transition-colors"
                   >
-                    Track in Valley
+                    Track in Region
                   </button>
                 </div>
               </div>
@@ -188,7 +190,7 @@ export const DispatchRadioModal: React.FC<DispatchRadioModalProps> = ({
 
             {/* Quests List */}
             <div className="flex flex-col gap-3 overflow-y-auto">
-              {SOLSTICE_QUESTS.map((quest) => {
+              {quests.map((quest) => {
                 const isCompleted = completedQuestIds.includes(quest.id);
                 const isActive = activeQuest?.quest.id === quest.id;
 

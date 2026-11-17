@@ -5,8 +5,8 @@
  */
 
 import React, { useState } from 'react';
-import { Compass, Gift, Heart, MapPin, Maximize2, Minimize2 } from 'lucide-react';
-import { WORLD_SIZE } from '../game/constants';
+import { Compass, Maximize2, Minimize2 } from 'lucide-react';
+import { WORLD_SIZE, type MapFeatureZone } from '../game/constants';
 
 export interface RadarLandmark {
   id: string;
@@ -34,6 +34,8 @@ interface VillageRadarProps {
   snowClearedPercent: number;
   activeQuestTarget?: { x: number; z: number; title: string } | null;
   dailyTargets?: Array<{ id: string; x: number; z: number; completed: boolean }>;
+  mapFeatures?: MapFeatureZone[];
+  levelName?: string;
 }
 
 export const VillageRadar: React.FC<VillageRadarProps> = ({
@@ -45,6 +47,8 @@ export const VillageRadar: React.FC<VillageRadarProps> = ({
   snowClearedPercent,
   activeQuestTarget,
   dailyTargets = [],
+  mapFeatures = [],
+  levelName,
 }) => {
   const [isMinimized, setIsMinimized] = useState(false);
 
@@ -53,6 +57,7 @@ export const VillageRadar: React.FC<VillageRadarProps> = ({
     const half = WORLD_SIZE / 2;
     return Math.max(4, Math.min(96, ((val + half) / WORLD_SIZE) * 100));
   };
+  const toSizePercent = (size: number) => (size / WORLD_SIZE) * 100;
 
   const px = mapToPercent(playerX);
   const pz = mapToPercent(playerZ);
@@ -77,11 +82,11 @@ export const VillageRadar: React.FC<VillageRadarProps> = ({
     <div className="flex flex-col rounded-2xl bg-slate-900/95 border border-slate-700/80 shadow-2xl p-2.5 w-44 backdrop-blur-none text-slate-200 select-none">
       {/* Header */}
       <div className="flex items-center justify-between pb-1.5 mb-1.5 border-b border-slate-800 text-[11px] font-semibold">
-        <div className="flex items-center gap-1 text-rose-300">
-          <Compass className="w-3.5 h-3.5 text-rose-400" />
-          <span>Village Radar</span>
+        <div className="flex items-center gap-1 text-rose-300 min-w-0">
+          <Compass className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+          <span className="truncate">{levelName || 'Village Radar'}</span>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 shrink-0">
           <span className="text-[10px] text-cyan-300 font-mono">{snowClearedPercent}%</span>
           <button
             onClick={() => setIsMinimized(true)}
@@ -117,6 +122,29 @@ export const VillageRadar: React.FC<VillageRadarProps> = ({
 
         {/* SVG Marker Layer with explicit viewBox */}
         <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full">
+          {/* Map Terrain Zones */}
+          {mapFeatures.map((zone) => {
+            const zx = mapToPercent(zone.x);
+            const zz = mapToPercent(zone.z);
+            const zw = toSizePercent(zone.width);
+            const zh = toSizePercent(zone.depth);
+            return (
+              <rect
+                key={zone.id}
+                x={zx - zw / 2}
+                y={zz - zh / 2}
+                width={zw}
+                height={zh}
+                rx={zone.type === 'plaza' ? 3 : 1}
+                fill={zone.color}
+                fillOpacity={zone.type === 'water' ? 0.25 : 0.14}
+                stroke={zone.color}
+                strokeOpacity={0.35}
+                strokeWidth="0.5"
+              />
+            );
+          })}
+
           {/* Daily Challenge Pending Waypoints */}
           {dailyTargets
             .filter((t) => !t.completed)

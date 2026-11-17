@@ -2,7 +2,7 @@
  * Game constants, upgrade definitions, collectibles, and balance parameters
  */
 
-export type GameState = 'TITLE' | 'PLAYING' | 'PAUSED' | 'GARAGE' | 'VICTORY' | 'SCRAPBOOK' | 'SETTINGS' | 'PHOTO' | 'DISPATCH_RADIO' | 'WINTER_PASS' | 'DAILY_CHALLENGE';
+export type GameState = 'TITLE' | 'PLAYING' | 'PAUSED' | 'GARAGE' | 'VICTORY' | 'SCRAPBOOK' | 'SETTINGS' | 'PHOTO' | 'DISPATCH_RADIO' | 'WINTER_PASS' | 'DAILY_CHALLENGE' | 'LEVEL_SELECT';
 
 export type WeatherType = 'gentle_flurry' | 'heavy_blizzard' | 'clear_aurora' | 'starlight_freeze';
 
@@ -435,6 +435,7 @@ export interface Landmark {
   cleared: boolean;
   requiredClearRatio: number;
   coupleCoupleQuotes: string[];
+  kind?: 'tree' | 'bakery' | 'gazebo' | 'lighthouse' | 'observatory' | 'fountain' | 'crystal';
 }
 
 export const LANDMARKS: Omit<Landmark, 'cleared'>[] = [
@@ -749,6 +750,535 @@ export function getDailyChallengeForDate(nowMs: number = Date.now()): {
     msUntilReset: Math.max(0, nextResetMs - nowMs),
   };
 }
+
+export type LevelGroundPattern = 'cobblestone' | 'boardwalk' | 'granite' | 'marble';
+
+export interface MapFeatureZone {
+  id: string;
+  type: 'water' | 'plaza' | 'road' | 'garden';
+  label: string;
+  x: number;
+  z: number;
+  width: number;
+  depth: number;
+  color: string;
+  colorHex: number;
+}
+
+export interface LevelMapConfig {
+  id: string;
+  number: number;
+  name: string;
+  subtitle: string;
+  description: string;
+  difficulty: 'Cozy' | 'Brisk' | 'Alpine' | 'Grand';
+  unlockCostLetters: number;
+  snowResistance: number;
+  theme: {
+    groundPattern: LevelGroundPattern;
+    groundColor: number;
+    snowTintHex: number;
+    accentColor: string;
+    chaletColor: number;
+    rimLightHex: number;
+  };
+  mapFeatures: MapFeatureZone[];
+  landmarks: Omit<Landmark, 'cleared'>[];
+  gifts: Omit<RomanticGift, 'collected'>[];
+  quests: SolsticeQuest[];
+  props: {
+    chalets: Array<{ x: number; z: number; rot: number; color: number }>;
+    pines: Array<{ x: number; z: number; s: number }>;
+    snowmen: Array<{ x: number; z: number }>;
+    crystals?: Array<{ x: number; z: number; s: number }>;
+  };
+}
+
+export const LEVEL_MAPS: LevelMapConfig[] = [
+  {
+    id: 'valentine-valley',
+    number: 1,
+    name: 'Valentine Valley',
+    subtitle: 'Alpine Village Heartlands',
+    description: 'Warm cobblestone lanes winding past timber chalets, the Cinnamon Bakery, Lover’s Bridge, and the Grand Solstice Tree.',
+    difficulty: 'Cozy',
+    unlockCostLetters: 0,
+    snowResistance: 1.0,
+    theme: {
+      groundPattern: 'cobblestone',
+      groundColor: 0x334155,
+      snowTintHex: 0xf8fafc,
+      accentColor: '#f43f5e',
+      chaletColor: 0x78350f,
+      rimLightHex: 0xf472b6,
+    },
+    mapFeatures: [
+      { id: 'vv-stream', type: 'water', label: 'Frozen Stream', x: 0, z: -18, width: 88, depth: 6, color: '#38bdf8', colorHex: 0x0c4a6e },
+      { id: 'vv-square', type: 'plaza', label: 'Town Square', x: 12, z: 0, width: 18, depth: 18, color: '#f59e0b', colorHex: 0x475569 },
+      { id: 'vv-avenue', type: 'road', label: 'Solstice Avenue', x: 0, z: 4, width: 8, depth: 56, color: '#94a3b8', colorHex: 0x334155 },
+    ],
+    landmarks: LANDMARKS,
+    gifts: ROMANTIC_GIFTS,
+    quests: SOLSTICE_QUESTS,
+    props: {
+      chalets: [
+        { x: -16, z: -8, rot: 0.3, color: 0x78350f },
+        { x: -28, z: 8, rot: 1.1, color: 0x92400e },
+        { x: -32, z: 28, rot: -0.4, color: 0x854d0e },
+        { x: 24, z: -22, rot: -1.2, color: 0x713f12 },
+        { x: 30, z: -6, rot: 2.8, color: 0x78350f },
+        { x: 26, z: 24, rot: 0.6, color: 0x9a3412 },
+        { x: -8, z: 34, rot: 3.1, color: 0x7c2d12 },
+        { x: 8, z: -30, rot: -0.2, color: 0x854d0e },
+      ],
+      pines: [
+        { x: -10, z: 12, s: 0.9 },
+        { x: -6, z: -12, s: 1.1 },
+        { x: 18, z: 10, s: 1.0 },
+        { x: 6, z: 22, s: 0.8 },
+        { x: -18, z: -28, s: 1.3 },
+        { x: 22, z: -32, s: 0.9 },
+      ],
+      snowmen: [
+        { x: -4, z: 8 },
+        { x: 16, z: -8 },
+        { x: -12, z: -6 },
+      ],
+    },
+  },
+  {
+    id: 'lantern-harbor',
+    number: 2,
+    name: 'Frozen Lantern Harbor',
+    subtitle: 'Boardwalk & Sea-Mist Cove',
+    description: 'Plow the frost-rimmed boardwalk piers, crimson coastal lighthouse, and ice-bound canal barges by the moonlit cove.',
+    difficulty: 'Brisk',
+    unlockCostLetters: 60,
+    snowResistance: 1.15,
+    theme: {
+      groundPattern: 'boardwalk',
+      groundColor: 0x2c3e55,
+      snowTintHex: 0xf0f9ff,
+      accentColor: '#38bdf8',
+      chaletColor: 0x1e3a5f,
+      rimLightHex: 0x38bdf8,
+    },
+    mapFeatures: [
+      { id: 'lh-bay', type: 'water', label: 'Moonlit Ice Cove', x: 22, z: 20, width: 34, depth: 28, color: '#0ea5e9', colorHex: 0x075985 },
+      { id: 'lh-canal', type: 'water', label: 'Harbor Canal', x: 0, z: -22, width: 76, depth: 7, color: '#38bdf8', colorHex: 0x0c4a6e },
+      { id: 'lh-pier', type: 'plaza', label: 'Lantern Pier Deck', x: -16, z: 18, width: 20, depth: 16, color: '#fbbf24', colorHex: 0x334155 },
+    ],
+    landmarks: [
+      {
+        id: 'harbor-lighthouse',
+        name: 'Crimson Harbor Lighthouse',
+        description: 'Clear the sea-mist drift around the beacon tower so fishing boats can spot home.',
+        x: 24,
+        z: 16,
+        radius: 7.5,
+        requiredClearRatio: 0.68,
+        kind: 'lighthouse',
+        coupleCoupleQuotes: ['“The beacon sweeps across the bay again—welcome ashore!”', '“No sea fog can dim this lantern.”'],
+      },
+      {
+        id: 'cocoa-barge',
+        name: 'Floating Cocoa Wharf',
+        description: 'Sweep the boardwalk plaza beside the moored cocoa boathouse.',
+        x: -18,
+        z: 20,
+        radius: 7,
+        requiredClearRatio: 0.68,
+        kind: 'bakery',
+        coupleCoupleQuotes: ['“Spiced cider and sea salt caramels are piping hot!”', '“Best waterfront view in winter!”'],
+      },
+      {
+        id: 'canal-arch',
+        name: 'Frozen Canal Promenade',
+        description: 'Carve a clear crossing over the northern harbor canal.',
+        x: 0,
+        z: -20,
+        radius: 6.5,
+        requiredClearRatio: 0.70,
+        kind: 'gazebo',
+        coupleCoupleQuotes: ['“Look at the lantern reflections dancing on the blue ice!”', '“Hand in hand across the cove.”'],
+      },
+      {
+        id: 'starlight-boathouse',
+        name: 'Starlight Boathouse',
+        description: 'Open the western harbor dockside where the choir gathers by the boats.',
+        x: -24,
+        z: -12,
+        radius: 7,
+        requiredClearRatio: 0.70,
+        kind: 'tree',
+        coupleCoupleQuotes: ['“The harbor bells sound sweeter over frozen waves!”', '“Every dock lantern is lit for us.”'],
+      },
+    ],
+    gifts: [
+      { id: 'lh-gift-1', name: 'Sea-Glass Heart Compass', icon: 'Lock', quote: '“Always points toward warm harbors and warmer hearts.”', x: 14, z: 12, value: 30 },
+      { id: 'lh-gift-2', name: 'Mariner’s Cashmere Scarf', icon: 'Mitten', quote: '“Woven to block the sharpest north sea gale.”', x: -12, z: -8, value: 25 },
+      { id: 'lh-gift-3', name: 'Message in a Frost Bottle', icon: 'Mail', quote: '“Meet me under the crimson lighthouse at high tide.”', x: 26, z: -14, value: 40 },
+      { id: 'lh-gift-4', name: 'Spiced Gingerbread Tin', icon: 'Coffee', quote: '“Baked aboard the cocoa wharf this very morning.”', x: -28, z: 12, value: 35 },
+      { id: 'lh-gift-5', name: 'Driftwood Music Locket', icon: 'Music', quote: '“Hums a gentle harbor lullaby when opened.”', x: 4, z: 28, value: 45 },
+      { id: 'lh-gift-6', name: 'Sapphire Tide Rose', icon: 'Flower', quote: '“Crystallized spray from the calmest winter tide.”', x: -8, z: -32, value: 55 },
+    ],
+    quests: [
+      {
+        id: 'lh_quest_beacon_fuel',
+        title: 'Lighthouse Lamp Oil Run',
+        requester: 'Keeper Marina',
+        category: 'delivery',
+        description: 'Rush warm lantern oil across the harbor ice to the Crimson Harbor Lighthouse!',
+        targetX: 24,
+        targetZ: 16,
+        targetRadius: 7.5,
+        timeLimitSec: 60,
+        rewardLetters: 55,
+        dialogueSuccess: '“The crimson beam just pierced the cove fog! Brilliant driving!”',
+      },
+      {
+        id: 'lh_quest_wharf_clear',
+        title: 'Cocoa Wharf Opening',
+        requester: 'Captain Bram',
+        category: 'clearing',
+        description: 'Clear the boardwalk snowdrifts around Floating Cocoa Wharf before the evening ferry docks!',
+        targetX: -18,
+        targetZ: 20,
+        targetRadius: 8.0,
+        timeLimitSec: 70,
+        rewardLetters: 65,
+        dialogueSuccess: '“Docklines secured and hot mugs poured for everyone!”',
+        requiredClearRatio: 0.68,
+      },
+      {
+        id: 'lh_quest_bottle_rescue',
+        title: 'Lost Driftwood Letter',
+        requester: 'Poet Celeste',
+        category: 'rescue',
+        description: 'Recover a sealed love letter trapped in drifts along the northern harbor seawall!',
+        targetX: 26,
+        targetZ: -14,
+        targetRadius: 6.5,
+        timeLimitSec: 55,
+        rewardLetters: 60,
+        dialogueSuccess: '“Not a single drop of seawater touched the ink! Thank you!”',
+      },
+    ],
+    props: {
+      chalets: [
+        { x: -18, z: -2, rot: 0.4, color: 0x1e3a5f },
+        { x: -30, z: 24, rot: 0.9, color: 0x334155 },
+        { x: 14, z: -28, rot: -0.5, color: 0x1e3a5f },
+        { x: 32, z: -4, rot: 2.1, color: 0x475569 },
+        { x: -6, z: 32, rot: 3.1, color: 0x1e3a5f },
+        { x: 18, z: 30, rot: -0.8, color: 0x334155 },
+      ],
+      pines: [
+        { x: -10, z: 10, s: 0.9 },
+        { x: 12, z: -12, s: 1.0 },
+        { x: -28, z: -26, s: 1.2 },
+        { x: 30, z: -26, s: 1.1 },
+        { x: 8, z: 20, s: 0.85 },
+      ],
+      snowmen: [
+        { x: -6, z: 10 },
+        { x: 12, z: 8 },
+        { x: -12, z: -14 },
+      ],
+    },
+  },
+  {
+    id: 'observatory-ridge',
+    number: 3,
+    name: 'Starlight Observatory Ridge',
+    subtitle: 'Aurora Peaks & Crystal Glade',
+    description: 'High above the clouds among glowing aurora crystal spires, granite ridge trails, and the copper dome of the Sky Observatory.',
+    difficulty: 'Alpine',
+    unlockCostLetters: 110,
+    snowResistance: 1.25,
+    theme: {
+      groundPattern: 'granite',
+      groundColor: 0x2e2640,
+      snowTintHex: 0xf5f3ff,
+      accentColor: '#c084fc',
+      chaletColor: 0x312e81,
+      rimLightHex: 0xa855f7,
+    },
+    mapFeatures: [
+      { id: 'or-plaza', type: 'plaza', label: 'Observatory Terrace', x: 0, z: -24, width: 22, depth: 18, color: '#c084fc', colorHex: 0x3b0764 },
+      { id: 'or-glade', type: 'garden', label: 'Aurora Crystal Glade', x: 24, z: -8, width: 20, depth: 20, color: '#34d399', colorHex: 0x064e3b },
+      { id: 'or-trail', type: 'road', label: 'Ridge Crest Trail', x: 0, z: 2, width: 10, depth: 62, color: '#a78bfa', colorHex: 0x312e81 },
+    ],
+    landmarks: [
+      {
+        id: 'sky-observatory',
+        name: 'Solstice Sky Observatory',
+        description: 'Clear the terrace dome courtyard so astronomers can align the twin Valentine telescope.',
+        x: 0,
+        z: -24,
+        radius: 7.5,
+        requiredClearRatio: 0.72,
+        kind: 'observatory',
+        coupleCoupleQuotes: ['“Look through the lens—two shooting stars just crossed!”', '“Under a million constellations with you.”'],
+      },
+      {
+        id: 'crystal-overlook',
+        name: 'Aurora Crystal Overlook',
+        description: 'Sweep the sparkling snow around the singing emerald ice spires.',
+        x: 24,
+        z: -8,
+        radius: 7.5,
+        requiredClearRatio: 0.70,
+        kind: 'crystal',
+        coupleCoupleQuotes: ['“The crystals hum whenever the northern lights ripple!”', '“Pure emerald starlight!”'],
+      },
+      {
+        id: 'summit-lodge',
+        name: 'Summit Hearth Lodge',
+        description: 'Open the alpine ski lodge doorway to warm stranded stargazers.',
+        x: -22,
+        z: 14,
+        radius: 7,
+        requiredClearRatio: 0.70,
+        kind: 'bakery',
+        coupleCoupleQuotes: ['“Chestnuts roasting and alpine fondue ready at last!”', '“Coziest refuge on the ridge.”'],
+      },
+      {
+        id: 'pine-chapel',
+        name: 'Whispering Pine Gazebo',
+        description: 'Clear the southern overlook where lovers make solstice wishes.',
+        x: 16,
+        z: 22,
+        radius: 7,
+        requiredClearRatio: 0.72,
+        kind: 'gazebo',
+        coupleCoupleQuotes: ['“Every wish whispered here echoes down the valley!”', '“Forever begins on the snowy ridge.”'],
+      },
+    ],
+    gifts: [
+      { id: 'or-gift-1', name: 'Brass Pocket Astrolabe', icon: 'Lock', quote: '“Charts every winter constellation over our heads.”', x: 14, z: -18, value: 40 },
+      { id: 'or-gift-2', name: 'Aurora Prism Pendant', icon: 'Flower', quote: '“Splits candlelight into ribbons of violet and green.”', x: -16, z: -12, value: 45 },
+      { id: 'or-gift-3', name: 'Stargazer’s Wool Blanket', icon: 'Mitten', quote: '“Wide enough for two beneath the meteor shower.”', x: -10, z: 24, value: 35 },
+      { id: 'or-gift-4', name: 'Spiced Alpine Mulled Cider', icon: 'Coffee', quote: '“Infused with star anise and mountain honey.”', x: 26, z: 12, value: 40 },
+      { id: 'or-gift-5', name: 'Celestial Chime Box', icon: 'Music', quote: '“Rings in harmony with the solstice midnight bell.”', x: -28, z: -2, value: 50 },
+      { id: 'or-gift-6', name: 'Comet-Seal Love Letter', icon: 'Mail', quote: '“Written in silver ink at 9,000 feet.”', x: 2, z: 32, value: 60 },
+    ],
+    quests: [
+      {
+        id: 'or_quest_lens_align',
+        title: 'Comet Lens Calibration',
+        requester: 'Astronomer Lyra',
+        category: 'clearing',
+        description: 'Clear deep alpine snow off the Solstice Sky Observatory terrace before the comet peaks!',
+        targetX: 0,
+        targetZ: -24,
+        targetRadius: 8.0,
+        timeLimitSec: 70,
+        rewardLetters: 75,
+        dialogueSuccess: '“Shutter open! What a dazzling streak across the northern sky!”',
+        requiredClearRatio: 0.7,
+      },
+      {
+        id: 'or_quest_lodge_blankets',
+        title: 'Summit Cocoa & Blankets',
+        requester: 'Innkeeper Soren',
+        category: 'delivery',
+        description: 'Deliver warm wool blankets from the ridge trail to Summit Hearth Lodge!',
+        targetX: -22,
+        targetZ: 14,
+        targetRadius: 7.0,
+        timeLimitSec: 58,
+        rewardLetters: 65,
+        dialogueSuccess: '“Everyone by the fireplace is cheering for the Heartplow!”',
+      },
+      {
+        id: 'or_quest_crystal_chime',
+        title: 'Crystal Glade Resonance',
+        requester: 'Guide Astrid',
+        category: 'rescue',
+        description: 'Recover a dropped silver tuning fork near the Aurora Crystal Overlook!',
+        targetX: 24,
+        targetZ: -8,
+        targetRadius: 7.0,
+        timeLimitSec: 52,
+        rewardLetters: 70,
+        dialogueSuccess: '“Listen to those emerald spires sing in tune again!”',
+      },
+    ],
+    props: {
+      chalets: [
+        { x: -24, z: -18, rot: 0.7, color: 0x312e81 },
+        { x: 26, z: -26, rot: -0.9, color: 0x3b0764 },
+        { x: -30, z: 28, rot: 0.3, color: 0x1e1b4b },
+        { x: 28, z: 26, rot: 2.5, color: 0x312e81 },
+        { x: -10, z: -32, rot: -0.2, color: 0x3b0764 },
+      ],
+      pines: [
+        { x: -12, z: 6, s: 1.0 },
+        { x: 12, z: 8, s: 1.1 },
+        { x: -16, z: 28, s: 1.2 },
+        { x: 10, z: -12, s: 0.9 },
+        { x: 32, z: 4, s: 1.2 },
+      ],
+      snowmen: [
+        { x: 8, z: -14 },
+        { x: -10, z: 12 },
+      ],
+      crystals: [
+        { x: 20, z: -14, s: 1.1 },
+        { x: 29, z: -4, s: 1.3 },
+        { x: 22, z: -2, s: 0.9 },
+        { x: -20, z: -24, s: 1.0 },
+        { x: 10, z: 28, s: 1.1 },
+      ],
+    },
+  },
+  {
+    id: 'solstice-palace',
+    number: 4,
+    name: 'Grand Solstice Palace',
+    subtitle: 'Royal Mirror Gardens',
+    description: 'Clear ceremonial snowdrifts across marble courtyard avenues, frozen mirror ponds, and candlelit royal pavilions.',
+    difficulty: 'Grand',
+    unlockCostLetters: 160,
+    snowResistance: 1.35,
+    theme: {
+      groundPattern: 'marble',
+      groundColor: 0x4a3b47,
+      snowTintHex: 0xfff1f2,
+      accentColor: '#fbbf24',
+      chaletColor: 0x881337,
+      rimLightHex: 0xfbbf24,
+    },
+    mapFeatures: [
+      { id: 'sp-courtyard', type: 'plaza', label: 'Royal Rose Courtyard', x: 0, z: 0, width: 32, depth: 32, color: '#fbbf24', colorHex: 0x523b4e },
+      { id: 'sp-pond-e', type: 'water', label: 'Mirror Pond East', x: 24, z: 4, width: 16, depth: 26, color: '#f472b6', colorHex: 0x831843 },
+      { id: 'sp-pond-w', type: 'water', label: 'Mirror Pond West', x: -24, z: 4, width: 16, depth: 26, color: '#f472b6', colorHex: 0x831843 },
+    ],
+    landmarks: [
+      {
+        id: 'royal-pavilion',
+        name: 'Royal Solstice Pavilion',
+        description: 'Clear the grand northern steps where the Winter Ball begins at midnight.',
+        x: 0,
+        z: -24,
+        radius: 8,
+        requiredClearRatio: 0.74,
+        kind: 'fountain',
+        coupleCoupleQuotes: ['“The royal chandeliers glow across the marble terrace!”', '“May I have this midnight waltz?”'],
+      },
+      {
+        id: 'mirror-pond-east',
+        name: 'Rose Mirror Fountain',
+        description: 'Sweep the eastern garden walkway beside the frozen rose-gold mirror lake.',
+        x: 24,
+        z: 4,
+        radius: 7.5,
+        requiredClearRatio: 0.72,
+        kind: 'gazebo',
+        coupleCoupleQuotes: ['“Two golden swans just glided past the frozen fountain!”', '“Like stepping inside a snowglobe.”'],
+      },
+      {
+        id: 'candle-conservatory',
+        name: 'Candlelight Conservatory',
+        description: 'Clear the western glasshouse courtyard blooming with winter camellias.',
+        x: -24,
+        z: 4,
+        radius: 7.5,
+        requiredClearRatio: 0.72,
+        kind: 'bakery',
+        coupleCoupleQuotes: ['“Warm honey-rose tea inside the glasshouse awaits!”', '“Even in midwinter, the roses bloom.”'],
+      },
+      {
+        id: 'golden-gatehouse',
+        name: 'Golden Bell Gatehouse',
+        description: 'Open the southern grand boulevard arch leading into the Palace Gardens.',
+        x: 0,
+        z: 24,
+        radius: 8,
+        requiredClearRatio: 0.75,
+        kind: 'tree',
+        coupleCoupleQuotes: ['“Every bell in the palace tower rings for Valentine Valley!”', '“The Grand Solstice shines eternal!”'],
+      },
+    ],
+    gifts: [
+      { id: 'sp-gift-1', name: 'Royal Rose-Gold Signet', icon: 'Lock', quote: '“Stamped with the crest of united hearts.”', x: 14, z: -14, value: 50 },
+      { id: 'sp-gift-2', name: 'Velvet Masquerade Ribbon', icon: 'Mitten', quote: '“Silk scarlet ribbon left on the pavilion stairs.”', x: -14, z: -14, value: 45 },
+      { id: 'sp-gift-3', name: 'Golden Swan Music Box', icon: 'Music', quote: '“Plays the Royal Solstice Finale in pure celesta chords.”', x: 14, z: 16, value: 60 },
+      { id: 'sp-gift-4', name: 'Camellia Blossom Elixir', icon: 'Coffee', quote: '“Fragrant warmth brewed in the winter conservatory.”', x: -14, z: 16, value: 50 },
+      { id: 'sp-gift-5', name: 'Imperial Wax-Sealed Letter', icon: 'Mail', quote: '“You are the hero of the entire Winter Solstice.”', x: 30, z: -20, value: 70 },
+      { id: 'sp-gift-6', name: 'Eternal Solstice Crown Rose', icon: 'Flower', quote: '“A crystallized rose spun from candlelight and frost.”', x: -30, z: -20, value: 80 },
+    ],
+    quests: [
+      {
+        id: 'sp_quest_ball_courtyard',
+        title: 'Royal Ball Grand Entrance',
+        requester: 'Chamberlain Aurelia',
+        category: 'clearing',
+        description: 'Clear ceremonial snow from the Royal Solstice Pavilion steps before the orchestra strikes midnight!',
+        targetX: 0,
+        targetZ: -24,
+        targetRadius: 8.5,
+        timeLimitSec: 75,
+        rewardLetters: 90,
+        dialogueSuccess: '“The brass fanfare echoes! The Winter Solstice Ball is officially open!”',
+        requiredClearRatio: 0.72,
+      },
+      {
+        id: 'sp_quest_tea_delivery',
+        title: 'Conservatory Rose Tea Express',
+        requester: 'Botanist Fleur',
+        category: 'delivery',
+        description: 'Carry freshly steeped camellia tea from the Conservatory to the Rose Mirror Fountain!',
+        targetX: 24,
+        targetZ: 4,
+        targetRadius: 7.5,
+        timeLimitSec: 55,
+        rewardLetters: 80,
+        dialogueSuccess: '“Still steaming with rose petals—the royal guests are delighted!”',
+      },
+      {
+        id: 'sp_quest_crown_keepsake',
+        title: 'Missing Signet Recovery',
+        requester: 'Prince Julian',
+        category: 'rescue',
+        description: 'Find the dropped Royal Rose-Gold Signet buried in deep palace courtyard drifts!',
+        targetX: 14,
+        targetZ: -14,
+        targetRadius: 6.5,
+        timeLimitSec: 50,
+        rewardLetters: 85,
+        dialogueSuccess: '“You found it in seconds! Tonight’s proposal can go ahead after all!”',
+      },
+    ],
+    props: {
+      chalets: [
+        { x: -24, z: -24, rot: 0.8, color: 0x881337 },
+        { x: 24, z: -24, rot: -0.8, color: 0x881337 },
+        { x: -28, z: 24, rot: 2.3, color: 0x9f1239 },
+        { x: 28, z: 24, rot: -2.3, color: 0x9f1239 },
+      ],
+      pines: [
+        { x: -12, z: -12, s: 1.0 },
+        { x: 12, z: -12, s: 1.0 },
+        { x: -12, z: 12, s: 1.0 },
+        { x: 12, z: 12, s: 1.0 },
+        { x: 34, z: -8, s: 1.2 },
+        { x: -34, z: -8, s: 1.2 },
+      ],
+      snowmen: [
+        { x: -8, z: 8 },
+        { x: 8, z: -8 },
+      ],
+      crystals: [
+        { x: 20, z: -16, s: 1.1 },
+        { x: -20, z: -16, s: 1.1 },
+        { x: 20, z: 18, s: 1.0 },
+        { x: -20, z: 18, s: 1.0 },
+      ],
+    },
+  },
+];
 
 export const WORLD_SIZE = 96; // 96x96 meter village area
 export const SNOW_GRID_RES = 96; // 1 meter per snow cell

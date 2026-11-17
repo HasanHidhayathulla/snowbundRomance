@@ -3,22 +3,32 @@
  */
 
 import React from 'react';
-import { Heart, Sparkles, RotateCcw, Play } from 'lucide-react';
+import { ArrowRight, Heart, Map as MapIcon, RotateCcw, Sparkles } from 'lucide-react';
 
 interface VictoryModalProps {
+  levelNumber: number;
+  levelName: string;
+  nextLevelName: string | null;
   snowClearedPercent: number;
   loveLetters: number;
   giftsFound: number;
   totalGifts: number;
+  onNextLevel?: () => void;
+  onOpenLevelSelect: () => void;
   onContinue: () => void;
   onRestart: () => void;
 }
 
 export const VictoryModal: React.FC<VictoryModalProps> = ({
+  levelNumber,
+  levelName,
+  nextLevelName,
   snowClearedPercent,
   loveLetters,
   giftsFound,
   totalGifts,
+  onNextLevel,
+  onOpenLevelSelect,
   onContinue,
   onRestart,
 }) => {
@@ -30,15 +40,18 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
         </div>
 
         <div>
-          <h2 className="text-2xl font-black tracking-tight text-white">
+          <span className="text-[11px] font-mono font-bold uppercase tracking-widest text-cyan-300">
+            Level {levelNumber} Cleared · {levelName}
+          </span>
+          <h2 className="text-2xl font-black tracking-tight text-white mt-1">
             Grand Solstice Celebration!
           </h2>
           <p className="text-xs text-rose-300 font-semibold uppercase tracking-widest mt-1">
-            All Lovers Reunited · Village Lit with Hope
+            All Lovers Reunited · Region Lit with Hope
           </p>
           <p className="text-sm text-slate-300 mt-2 leading-relaxed">
-            The snowdrift lanes are open, the festival lights shine across the frozen river,
-            and the laughter of reunited couples echoes across Valentine Valley.
+            The snowdrift lanes are open, the festival lights shine bright, and the laughter of
+            reunited couples echoes across {levelName}.
           </p>
         </div>
 
@@ -60,12 +73,24 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
           </div>
         </div>
 
-        {/* Buttons */}
-        <div className="flex flex-col sm:flex-row gap-3 w-full pt-2">
+        {/* Primary Next Level CTA when unlocked */}
+        {nextLevelName && onNextLevel && (
+          <button
+            type="button"
+            onClick={onNextLevel}
+            className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-cyan-600 to-rose-600 hover:from-cyan-500 hover:to-rose-500 font-bold text-white flex items-center justify-center gap-2 shadow-lg transition-all cursor-pointer"
+          >
+            <span>Advance to Level {levelNumber + 1}: {nextLevelName}</span>
+            <ArrowRight className="w-4 h-4" />
+          </button>
+        )}
+
+        {/* Secondary Buttons */}
+        <div className="flex flex-col sm:flex-row gap-2.5 w-full">
           <button
             type="button"
             onClick={onContinue}
-            className="flex-1 py-3 px-4 rounded-xl bg-rose-600 hover:bg-rose-500 font-semibold text-white flex items-center justify-center gap-2 transition-colors cursor-pointer"
+            className="flex-1 py-2.5 px-4 rounded-xl bg-rose-600 hover:bg-rose-500 font-semibold text-xs text-white flex items-center justify-center gap-2 transition-colors cursor-pointer"
           >
             <Sparkles className="w-4 h-4 text-amber-200" />
             <span>Keep Plowing Free Roam</span>
@@ -73,8 +98,17 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
 
           <button
             type="button"
+            onClick={onOpenLevelSelect}
+            className="py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 font-semibold text-xs flex items-center justify-center gap-1.5 border border-slate-700 transition-colors cursor-pointer"
+          >
+            <MapIcon className="w-4 h-4" />
+            <span>Maps</span>
+          </button>
+
+          <button
+            type="button"
             onClick={onRestart}
-            className="py-3 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold flex items-center justify-center gap-2 border border-slate-700 transition-colors cursor-pointer"
+            className="py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs flex items-center justify-center gap-1.5 border border-slate-700 transition-colors cursor-pointer"
           >
             <RotateCcw className="w-4 h-4 text-slate-400" />
             <span>Fresh Snowfall</span>

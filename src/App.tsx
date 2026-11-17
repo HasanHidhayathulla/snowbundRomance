@@ -8,6 +8,7 @@ import { synthAudio } from './audio/synthAudio';
 import { DailyChallengeModal } from './components/DailyChallengeModal';
 import { DispatchRadioModal } from './components/DispatchRadioModal';
 import { GameHUD } from './components/GameHUD';
+import { LevelSelectModal } from './components/LevelSelectModal';
 import { PauseModal } from './components/PauseModal';
 import { PhotoModeModal } from './components/PhotoModeModal';
 import { ScrapbookModal } from './components/ScrapbookModal';
@@ -16,7 +17,7 @@ import { ShopModal } from './components/ShopModal';
 import { TitleScreen } from './components/TitleScreen';
 import { VictoryModal } from './components/VictoryModal';
 import { WinterPassModal } from './components/WinterPassModal';
-import { ACHIEVEMENTS, LANDMARKS, ROMANTIC_GIFTS, WEATHER_CONDITIONS, getDailyChallengeForDate } from './game/constants';
+import { ACHIEVEMENTS, LANDMARKS, LEVEL_MAPS, ROMANTIC_GIFTS, WEATHER_CONDITIONS, getDailyChallengeForDate } from './game/constants';
 import { SnowPlowGameEngine, type GameHUDStats } from './game/engine';
 import {
   clearGameData,
@@ -101,6 +102,10 @@ export default function App() {
         completed: false,
       };
     })(),
+    currentLevel: LEVEL_MAPS[0],
+    unlockedLevelIds: ['valentine-valley'],
+    completedLevelIds: [],
+    availableQuests: LEVEL_MAPS[0].quests,
   });
 
   const returnStateRef = useRef<'TITLE' | 'PLAYING'>('TITLE');
@@ -188,6 +193,30 @@ export default function App() {
     const engine = getEngine('handleOpenDailyChallenge');
     if (!engine) return;
     engine.setGameState('DAILY_CHALLENGE');
+  };
+
+  const handleOpenLevelSelect = () => {
+    const engine = getEngine('handleOpenLevelSelect');
+    if (!engine) return;
+    engine.setGameState('LEVEL_SELECT');
+  };
+
+  const handleSelectLevel = (levelId: string) => {
+    const engine = getEngine('handleSelectLevel');
+    if (!engine) return;
+    engine.selectLevel(levelId);
+  };
+
+  const handleUnlockLevel = (levelId: string) => {
+    const engine = getEngine('handleUnlockLevel');
+    if (!engine) return;
+    engine.unlockLevel(levelId);
+  };
+
+  const handleNextLevel = () => {
+    const engine = getEngine('handleNextLevel');
+    if (!engine) return;
+    engine.advanceToNextLevel();
   };
 
   const handleClaimPassTierReward = (tierLevel: number) => {
@@ -361,9 +390,12 @@ export default function App() {
       {/* 2. Title Screen Overlay */}
       {stats.gameState === 'TITLE' && (
         <TitleScreen
+          currentLevelNumber={stats.currentLevel.number}
+          currentLevelName={stats.currentLevel.name}
           onStart={handleStartGame}
           isMuted={settings.isMuted}
           onToggleMute={handleToggleMute}
+          onOpenLevelSelect={handleOpenLevelSelect}
           onOpenDispatchRadio={handleOpenDispatchRadio}
           onOpenWinterPass={handleOpenWinterPass}
           onOpenDailyChallenge={handleOpenDailyChallenge}
@@ -382,6 +414,7 @@ export default function App() {
           onOpenDispatchRadio={handleOpenDispatchRadio}
           onOpenWinterPass={handleOpenWinterPass}
           onOpenDailyChallenge={handleOpenDailyChallenge}
+          onOpenLevelSelect={handleOpenLevelSelect}
           onOpenSettings={handleOpenSettings}
           onPause={handlePause}
           onCycleRadio={handleCycleRadio}
@@ -399,6 +432,7 @@ export default function App() {
           activeQuest={stats.activeQuest}
           completedQuestIds={stats.completedQuestIds}
           loveLetters={stats.loveLetters}
+          quests={stats.availableQuests}
           onSelectRadioStation={handleSelectRadioStation}
           onStartQuest={handleStartQuest}
           onCancelQuest={handleCancelQuest}
@@ -427,6 +461,7 @@ export default function App() {
         <PauseModal
           onResume={handleResume}
           onRestart={handleRestart}
+          onOpenLevelSelect={handleOpenLevelSelect}
           onOpenWorkshop={handleOpenWorkshop}
           onOpenDispatchRadio={handleOpenDispatchRadio}
           onOpenWinterPass={handleOpenWinterPass}
@@ -471,6 +506,21 @@ export default function App() {
         />
       )}
 
+      {/* 3.10 Levels & Topographic Maps Modal */}
+      {stats.gameState === 'LEVEL_SELECT' && (
+        <LevelSelectModal
+          currentLevelId={stats.currentLevel.id}
+          unlockedLevelIds={stats.unlockedLevelIds}
+          completedLevelIds={stats.completedLevelIds}
+          loveLetters={stats.loveLetters}
+          playerX={stats.playerX}
+          playerZ={stats.playerZ}
+          onSelectLevel={handleSelectLevel}
+          onUnlockLevel={handleUnlockLevel}
+          onClose={returnStateRef.current === 'PLAYING' ? handleResume : handleReturnToTitle}
+        />
+      )}
+
       {/* 7. Solstice Scrapbook (Heart Log & Album) Modal */}
       {stats.gameState === 'SCRAPBOOK' && (
         <ScrapbookModal
@@ -484,9 +534,6 @@ export default function App() {
         />
       )}
 
-      {/* 7. Solstice Postcard Photo Mode Modal */}
-      {/* 8. Solstice Postcard Photo Mode Modal */}
-
       {/* 8. Settings Modal */}
       {stats.gameState === 'SETTINGS' && (
         <SettingsModal
@@ -498,16 +545,25 @@ export default function App() {
       )}
 
       {/* 6. Victory Modal */}
-      {stats.gameState === 'VICTORY' && (
-        <VictoryModal
-          snowClearedPercent={stats.snowClearedPercent}
-          loveLetters={stats.loveLetters}
-          giftsFound={stats.giftsFound}
-          totalGifts={stats.totalGifts}
-          onContinue={handleContinueFreeRoam}
-          onRestart={handleRestart}
-        />
-      )}
+      {stats.gameState === 'VICTORY' && (() => {
+        const curIdx = LEVEL_MAPS.findIndex((l) => l.id === stats.currentLevel.id);
+        const nextLevel = curIdx >= 0 && curIdx + 1 < LEVEL_MAPS.length ? LEVEL_MAPS[curIdx + 1] : null;
+        return (
+          <VictoryModal
+            levelNumber={stats.currentLevel.number}
+            levelName={stats.currentLevel.name}
+            nextLevelName={nextLevel ? nextLevel.name : null}
+            snowClearedPercent={stats.snowClearedPercent}
+            loveLetters={stats.loveLetters}
+            giftsFound={stats.giftsFound}
+            totalGifts={stats.totalGifts}
+            onNextLevel={nextLevel ? handleNextLevel : undefined}
+            onOpenLevelSelect={handleOpenLevelSelect}
+            onContinue={handleContinueFreeRoam}
+            onRestart={handleRestart}
+          />
+        );
+      })()}
     </div>
   );
 }

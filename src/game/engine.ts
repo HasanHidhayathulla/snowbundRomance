@@ -11,6 +11,7 @@ import {
   ACHIEVEMENTS,
   COMBO_LEVELS,
   LANDMARKS,
+  LEVEL_MAPS,
   RADIO_STATIONS,
   ROMANTIC_GIFTS,
   SOLSTICE_QUESTS,
@@ -25,6 +26,7 @@ import {
   type DailyRomanticChallenge,
   type GameState,
   type Landmark,
+  type LevelMapConfig,
   type RadioStation,
   type RomanticGift,
   type SolsticeQuest,
@@ -45,12 +47,17 @@ import {
   createChalet,
   createCollectibleGift,
   createCoupleModel,
+  createCrystalSpireCluster,
   createGazebo,
   createGrandSolsticeTree,
   createHeartPlowTractor,
+  createLighthouse,
+  createMarbleFountain,
+  createObservatoryDome,
   createSnowman,
   createSnowPine,
   createStreetlamp,
+  materials,
 } from './models';
 import { ParticleSystem } from './particleSystem';
 import { SnowGridSystem } from './snowGrid';
@@ -119,6 +126,10 @@ export interface GameHUDStats {
   claimedPassTierIds: number[];
   unclaimedPassRewardsCount: number;
   dailyChallenge: DailyChallengeStatus;
+  currentLevel: LevelMapConfig;
+  unlockedLevelIds: string[];
+  completedLevelIds: string[];
+  availableQuests: SolsticeQuest[];
 }
 
 import {
@@ -218,6 +229,12 @@ export class SnowPlowGameEngine {
   private dailyStepMeshes: Map<string, THREE.Group> = new Map();
   private dailySyncTimer: number = 0;
 
+  // Level & Map Progression
+  private currentLevel: LevelMapConfig = LEVEL_MAPS[0];
+  private unlockedLevelIds: string[] = ['valentine-valley'];
+  private completedLevelIds: string[] = [];
+  private worldGroup: THREE.Group = new THREE.Group();
+
   // World Elements
   private landmarks: Landmark[] = [];
   private landmarkMeshes: Map<string, THREE.Group> = new Map();
@@ -251,11 +268,29 @@ export class SnowPlowGameEngine {
     this.upgrades = { ...this.upgrades, ...saved.upgrades };
     this.unlockedAchievementIds = [...(saved.unlockedAchievementIds || [])];
 
+    // Load level progression
+    this.unlockedLevelIds =
+      saved.unlockedLevelIds && saved.unlockedLevelIds.length > 0
+        ? [...new Set(['valentine-valley', ...saved.unlockedLevelIds])]
+        : ['valentine-valley'];
+    this.completedLevelIds = [...(saved.completedLevelIds || [])];
+    const savedLevel = LEVEL_MAPS.find((l) => l.id === saved.currentLevelId);
+    if (savedLevel && this.unlockedLevelIds.includes(savedLevel.id)) {
+      this.currentLevel = savedLevel;
+    } else {
+      this.currentLevel = LEVEL_MAPS[0];
+    }
+
     // Load saved settings
     const settings = loadGameSettings();
     this.atmosphere = settings.atmosphere || 'twilight';
     this.radioStationId = settings.radioStationId || 'val-classic';
-    this.completedQuestIds = saved.completedQuestIds || [];
+    const levelSave = saved.levelProgress?.[this.currentLevel.id];
+    this.completedQuestIds = levelSave
+      ? [...(levelSave.completedQuestIds || [])]
+      : this.currentLevel.id === 'valentine-valley'
+      ? [...(saved.completedQuestIds || [])]
+      : [];
     this.unlockedPaintIds = saved.unlockedPaintIds || ['crimson'];
     this.selectedPaintId = saved.selectedPaintId || 'crimson';
     this.unlockedDecalIds = saved.unlockedDecalIds || ['heart'];
@@ -384,8 +419,9 @@ export class SnowPlowGameEngine {
     this.tractorGroup.add(this.comboFlashLight);
     this.scene.add(this.tractorGroup);
 
-    // 5. Waypoint / Quest Beacon Mesh
+    // 5. Waypoint / Quest Beacon Mesh & World Props Group
     this.initQuestBeacon();
+    this.scene.add(this.worldGroup);
 
     if (!this.isSoftwareGl) {
       this.renderer.compile(this.scene, this.camera);
@@ -436,7 +472,63 @@ export class SnowPlowGameEngine {
     this.scene.add(this.questBeaconGroup);
   }
 
+  private clearWorldGroup() {
+    const sharedMats = new Set<THREE.Material>(Object.values(materials));
+    this.worldGroup.traverse((obj) => {
+      const mesh = obj as THREE.Mesh;
+      if (mesh.geometry) {
+        mesh.geometry.dispose();
+      }
+      if (mesh.material) {
+        if (Array.isArray(mesh.material)) {
+          mesh.material.forEach((m) => {
+            if (!sharedMats.has(m)) m.dispose();
+          });
+        } else if (!sharedMats.has(mesh.material)) {
+          mesh.material.dispose();
+        }
+      }
+    });
+    this.worldGroup.clear();
+    this.landmarkMeshes.clear();
+    this.coupleMeshes.clear();
+    this.giftMeshes.clear();
+  }
+
   private initWorldEntities() {
+    this.clearWorldGroup();
+
+    const level = this.currentLevel;
+
+    // Configure Ground Texture & Snow Tint for this region
+    this.snowGrid.configureMapTheme(
+      level.theme.groundPattern,
+      level.theme.groundColor,
+      level.theme.snowTintHex
+    );
+
+    if (this.rimLight && this.atmosphere === 'twilight') {
+      this.rimLight.color.setHex(level.theme.rimLightHex);
+    }
+
+    // 0. Terrain Feature Decals (Frozen waterways, plazas, avenues, glades)
+    level.mapFeatures.forEach((zone) => {
+      const geo = new THREE.PlaneGeometry(zone.width, zone.depth);
+      geo.rotateX(-Math.PI / 2);
+      const isWater = zone.type === 'water';
+      const mat = new THREE.MeshStandardMaterial({
+        color: zone.colorHex,
+        roughness: isWater ? 0.14 : 0.72,
+        metalness: isWater ? 0.45 : 0.08,
+        emissive: isWater ? zone.colorHex : 0x000000,
+        emissiveIntensity: isWater ? 0.18 : 0,
+      });
+      const pad = new THREE.Mesh(geo, mat);
+      pad.position.set(zone.x, isWater ? 0.02 : 0.015, zone.z);
+      pad.receiveShadow = true;
+      this.worldGroup.add(pad);
+    });
+
     // 1. Natural Mountain / Pine Perimeter to avoid floating void box
     for (let i = 0; i < 48; i++) {
       const angle = (i / 48) * Math.PI * 2;
@@ -446,67 +538,67 @@ export class SnowPlowGameEngine {
       const pine = createSnowPine(1.2 + Math.random() * 0.7);
       pine.position.set(px, 0, pz);
       pine.rotation.y = Math.random() * Math.PI * 2;
-      this.scene.add(pine);
+      this.worldGroup.add(pine);
     }
 
-    // 2. Village Chalets
-    const chaletCoords = [
-      { x: -16, z: -8, rot: 0.3, color: 0x78350f },
-      { x: -28, z: 8, rot: 1.1, color: 0x92400e },
-      { x: -32, z: 28, rot: -0.4, color: 0x854d0e },
-      { x: 24, z: -22, rot: -1.2, color: 0x713f12 },
-      { x: 30, z: -6, rot: 2.8, color: 0x78350f },
-      { x: 26, z: 24, rot: 0.6, color: 0x9a3412 },
-      { x: -8, z: 34, rot: 3.1, color: 0x7c2d12 },
-      { x: 8, z: -30, rot: -0.2, color: 0x854d0e },
-    ];
-
-    chaletCoords.forEach((c) => {
+    // 2. Region Chalets & Streetlamps
+    level.props.chalets.forEach((c) => {
       const house = createChalet(c.color);
       house.position.set(c.x, 0, c.z);
       house.rotation.y = c.rot;
-      this.scene.add(house);
+      this.worldGroup.add(house);
 
-      // Add a couple streetlamps near houses
       const { group: lamp } = createStreetlamp();
       lamp.position.set(c.x + 3.6, 0, c.z + 3.6);
-      this.scene.add(lamp);
+      this.worldGroup.add(lamp);
     });
 
-    // 3. Scattered Festive Evergreens and Snowmen in gardens
-    const innerPines = [
-      { x: -10, z: 12, s: 0.9 },
-      { x: -6, z: -12, s: 1.1 },
-      { x: 18, z: 10, s: 1.0 },
-      { x: 6, z: 22, s: 0.8 },
-      { x: -18, z: -28, s: 1.3 },
-      { x: 22, z: -32, s: 0.9 },
-    ];
-    innerPines.forEach((p) => {
+    // 3. Scattered Festive Evergreens, Snowmen & Crystal Spires
+    level.props.pines.forEach((p) => {
       const pine = createSnowPine(p.s);
       pine.position.set(p.x, 0, p.z);
-      this.scene.add(pine);
+      this.worldGroup.add(pine);
     });
 
-    // Snowmen
-    const snowmanPositions = [
-      { x: -4, z: 8 },
-      { x: 16, z: -8 },
-      { x: -12, z: -6 },
-    ];
-    snowmanPositions.forEach((sp) => {
+    level.props.snowmen.forEach((sp) => {
       const sm = createSnowman();
       sm.position.set(sp.x, 0, sp.z);
       sm.rotation.y = Math.random() * Math.PI * 2;
-      this.scene.add(sm);
+      this.worldGroup.add(sm);
     });
 
-    // 4. Landmarks
-    const saved = loadGameProgress();
-    const savedClearedIds = new Set(saved?.clearedLandmarkIds || []);
-    const savedGiftIds = new Set(saved?.unlockedGiftIds || []);
+    if (level.props.crystals) {
+      level.props.crystals.forEach((cr) => {
+        const spire = createCrystalSpireCluster(cr.s);
+        spire.position.set(cr.x, 0, cr.z);
+        this.worldGroup.add(spire);
+      });
+    }
 
-    this.landmarks = LANDMARKS.map((lm) => ({
+    // 4. Region Landmarks & Saved Progress
+    const saved = loadGameProgress();
+    const levelSave = saved?.levelProgress?.[level.id];
+    const savedClearedIds = new Set(
+      levelSave
+        ? levelSave.clearedLandmarkIds || []
+        : level.id === 'valentine-valley'
+        ? saved?.clearedLandmarkIds || []
+        : []
+    );
+    const savedGiftIds = new Set(
+      levelSave
+        ? levelSave.unlockedGiftIds || []
+        : level.id === 'valentine-valley'
+        ? saved?.unlockedGiftIds || []
+        : []
+    );
+    this.completedQuestIds = levelSave
+      ? [...(levelSave.completedQuestIds || [])]
+      : level.id === 'valentine-valley'
+      ? [...(saved?.completedQuestIds || [])]
+      : [];
+
+    this.landmarks = level.landmarks.map((lm) => ({
       ...lm,
       cleared: savedClearedIds.has(lm.id),
     }));
@@ -514,34 +606,42 @@ export class SnowPlowGameEngine {
 
     this.landmarks.forEach((lm) => {
       let landmarkMesh: THREE.Group;
-      if (lm.id === 'town-square') {
+      if (lm.kind === 'tree' || lm.id === 'town-square') {
         landmarkMesh = createGrandSolsticeTree();
         const gazebo = createGazebo();
         gazebo.position.set(-6, 0, 4);
         landmarkMesh.add(gazebo);
-      } else if (lm.id === 'bakery') {
-        landmarkMesh = createChalet(0xa16207);
+      } else if (lm.kind === 'bakery' || lm.id === 'bakery') {
+        landmarkMesh = createChalet(level.theme.chaletColor);
         const { group: lamp } = createStreetlamp();
         lamp.position.set(3, 0, 3);
         landmarkMesh.add(lamp);
+      } else if (lm.kind === 'lighthouse') {
+        landmarkMesh = createLighthouse();
+      } else if (lm.kind === 'observatory') {
+        landmarkMesh = createObservatoryDome();
+      } else if (lm.kind === 'crystal') {
+        landmarkMesh = createCrystalSpireCluster(1.4);
+      } else if (lm.kind === 'fountain') {
+        landmarkMesh = createMarbleFountain();
       } else {
         landmarkMesh = createGazebo();
       }
 
       landmarkMesh.position.set(lm.x, 0, lm.z);
-      this.scene.add(landmarkMesh);
+      this.worldGroup.add(landmarkMesh);
       this.landmarkMeshes.set(lm.id, landmarkMesh);
 
       // Reunited couple
       const couple = createCoupleModel();
       couple.position.set(lm.x + 1.8, 0, lm.z + 1.8);
       couple.visible = lm.cleared;
-      this.scene.add(couple);
+      this.worldGroup.add(couple);
       this.coupleMeshes.set(lm.id, couple);
     });
 
-    // 5. Buried Romantic Collectibles
-    this.gifts = ROMANTIC_GIFTS.map((g) => ({
+    // 5. Buried Romantic Collectibles for this level
+    this.gifts = level.gifts.map((g) => ({
       ...g,
       collected: savedGiftIds.has(g.id),
     }));
@@ -549,7 +649,7 @@ export class SnowPlowGameEngine {
       const giftGroup = createCollectibleGift();
       giftGroup.position.set(g.x, 0.4, g.z);
       giftGroup.visible = !g.collected;
-      this.scene.add(giftGroup);
+      this.worldGroup.add(giftGroup);
       this.giftMeshes.set(g.id, giftGroup);
     });
   }
@@ -595,8 +695,14 @@ export class SnowPlowGameEngine {
     }
 
     const reqIds = this.dailyChallenge.requiredLandmarkIds || [];
+    const activeLandmarks = this.currentLevel.landmarks;
     return reqIds
-      .map((lmId) => LANDMARKS.find((l) => l.id === lmId))
+      .map((lmId, idx) => {
+        const direct = activeLandmarks.find((l) => l.id === lmId);
+        if (direct) return direct;
+        const baseIdx = LANDMARKS.findIndex((l) => l.id === lmId);
+        return activeLandmarks[(baseIdx >= 0 ? baseIdx : idx) % activeLandmarks.length];
+      })
       .filter((lm): lm is NonNullable<typeof lm> => Boolean(lm))
       .map((lm) => ({
         id: lm.id,
@@ -730,7 +836,7 @@ export class SnowPlowGameEngine {
 
       let stepReached = false;
       if (this.dailyChallenge.category === 'landmark_visit') {
-        const lm = LANDMARKS.find((l) => l.id === step.id);
+        const lm = this.currentLevel.landmarks.find((l) => l.id === step.id);
         const visitRadius = (lm ? lm.radius : 6.5) + 1.5;
         const dist = Math.hypot(step.x - this.posX, step.z - this.posZ);
         stepReached = dist <= visitRadius;
@@ -873,6 +979,13 @@ export class SnowPlowGameEngine {
           this.setGameState('PLAYING');
         }
       }
+      if (e.code === 'KeyM') {
+        if (this.gameState === 'PLAYING' || this.gameState === 'TITLE') {
+          this.setGameState('LEVEL_SELECT');
+        } else if (this.gameState === 'LEVEL_SELECT') {
+          this.setGameState('PLAYING');
+        }
+      }
     });
 
     window.addEventListener('keyup', (e) => {
@@ -1004,7 +1117,7 @@ export class SnowPlowGameEngine {
     this.gameState = 'PLAYING';
     synthAudio.init();
     synthAudio.resume();
-    this.triggerMessage('Welcome to Valentine Valley! Clear the snowy roads & reunite the lovers!');
+    this.triggerMessage(`Welcome to ${this.currentLevel.name}! Clear the snowy roads & reunite the lovers!`);
   }
 
   public setGameState(state: GameState) {
@@ -1079,7 +1192,9 @@ export class SnowPlowGameEngine {
   }
 
   public startQuest(questId: string): boolean {
-    const quest = SOLSTICE_QUESTS.find((q) => q.id === questId);
+    const quest =
+      this.currentLevel.quests.find((q) => q.id === questId) ||
+      SOLSTICE_QUESTS.find((q) => q.id === questId);
     if (!quest) return false;
 
     this.activeQuest = {
@@ -1226,13 +1341,102 @@ export class SnowPlowGameEngine {
     this.setWeather(next);
   }
 
+  public selectLevel(levelId: string): boolean {
+    const target = LEVEL_MAPS.find((l) => l.id === levelId);
+    if (!target || !this.unlockedLevelIds.includes(levelId)) return false;
+
+    this.saveProgressState();
+    this.currentLevel = target;
+
+    // Reset tractor & run state for the newly loaded map
+    this.posX = 0;
+    this.posZ = 0;
+    this.heading = Math.PI;
+    this.speed = 0;
+    this.steerAngle = 0;
+    this.boostFuel = 100;
+    this.isBoosting = false;
+    this.isPlowing = false;
+    this.comboLevel = 1;
+    this.comboTimer = 0;
+    this.comboClipTitle = null;
+    this.comboClipTimer = 0;
+    this.comboEncoreCount = 0;
+    this.snowClearedAccumulator = 0;
+    this.snowClearedPercent = 0;
+    this.activeQuest = null;
+    this.questBeaconGroup.visible = false;
+
+    this.tractorGroup.position.set(0, 0, 0);
+    this.tractorGroup.rotation.y = Math.PI;
+    this.tractorGroup.scale.set(1, 1, 1);
+    if (this.comboFlashLight) this.comboFlashLight.intensity = 0;
+
+    this.snowGrid.resetSnow();
+    this.initWorldEntities();
+    this.buildDailyGuideMeshes();
+    this.saveProgressState();
+
+    this.gameState = 'PLAYING';
+    synthAudio.init();
+    synthAudio.resume();
+    synthAudio.playUpgradeSound();
+    this.triggerMessage(`Deployed to Level ${target.number}: ${target.name} — ${target.subtitle}!`);
+    this.pushHUDUpdate();
+    return true;
+  }
+
+  public unlockLevel(levelId: string): boolean {
+    if (this.unlockedLevelIds.includes(levelId)) {
+      return this.selectLevel(levelId);
+    }
+    const target = LEVEL_MAPS.find((l) => l.id === levelId);
+    if (!target || this.loveLetters < target.unlockCostLetters) return false;
+
+    this.loveLetters -= target.unlockCostLetters;
+    this.unlockedLevelIds.push(levelId);
+    this.saveProgressState();
+    return this.selectLevel(levelId);
+  }
+
+  public advanceToNextLevel(): boolean {
+    const idx = LEVEL_MAPS.findIndex((l) => l.id === this.currentLevel.id);
+    if (idx < 0 || idx + 1 >= LEVEL_MAPS.length) return false;
+    const next = LEVEL_MAPS[idx + 1];
+    if (!this.unlockedLevelIds.includes(next.id)) {
+      this.unlockedLevelIds.push(next.id);
+    }
+    return this.selectLevel(next.id);
+  }
+
   private saveProgressState() {
-    saveGameProgress({
-      loveLetters: this.loveLetters,
-      upgrades: { ...this.upgrades },
+    const prev = loadGameProgress();
+    const levelProgress = { ...(prev.levelProgress || {}) };
+    levelProgress[this.currentLevel.id] = {
       clearedLandmarkIds: this.landmarks.filter((l) => l.cleared).map((l) => l.id),
       unlockedGiftIds: this.gifts.filter((g) => g.collected).map((g) => g.id),
       completedQuestIds: [...this.completedQuestIds],
+    };
+
+    saveGameProgress({
+      loveLetters: this.loveLetters,
+      upgrades: { ...this.upgrades },
+      clearedLandmarkIds:
+        this.currentLevel.id === 'valentine-valley'
+          ? this.landmarks.filter((l) => l.cleared).map((l) => l.id)
+          : prev.clearedLandmarkIds,
+      unlockedGiftIds:
+        this.currentLevel.id === 'valentine-valley'
+          ? this.gifts.filter((g) => g.collected).map((g) => g.id)
+          : prev.unlockedGiftIds,
+      completedQuestIds:
+        this.currentLevel.id === 'valentine-valley'
+          ? [...this.completedQuestIds]
+          : prev.completedQuestIds,
+      currentLevelId: this.currentLevel.id,
+      unlockedLevelIds: [...this.unlockedLevelIds],
+      completedLevelIds: [...this.completedLevelIds],
+      levelProgress,
       unlockedPaintIds: [...this.unlockedPaintIds],
       selectedPaintId: this.selectedPaintId,
       unlockedDecalIds: [...this.unlockedDecalIds],
@@ -1407,7 +1611,8 @@ export class SnowPlowGameEngine {
 
     // 2.5 Tractor Kinematics Simulation
     const frictionMult = cond.frictionMultiplier;
-    const maxSpeed = (throttle >= 0 ? 12 : 6) * (this.isBoosting ? boostMultiplier : 1.0);
+    const snowPackFactor = this.isPlowing ? Math.max(0.84, 1 - (this.currentLevel.snowResistance - 1) * 0.25) : 1.0;
+    const maxSpeed = (throttle >= 0 ? 12 : 6) * (this.isBoosting ? boostMultiplier : 1.0) * snowPackFactor;
     const accelRate = (this.isBoosting ? 16 : 10) * (throttle < 0 ? 1 : Math.max(0.8, frictionMult));
     const frictionRate = 6 * frictionMult;
 
@@ -1697,11 +1902,6 @@ export class SnowPlowGameEngine {
             this.checkAchievement('keepsake_hunter');
           }
 
-          saveGameProgress({
-            unlockedGiftIds: this.gifts.filter((g) => g.collected).map((g) => g.id),
-            loveLetters: this.loveLetters,
-          });
-
           synthAudio.playGiftPickup();
           this.hitstopDuration = 0.06; // brief hitstop
           this.particles.emitRomanticHearts(gift.x, 1.0, gift.z, 20);
@@ -1740,13 +1940,26 @@ export class SnowPlowGameEngine {
       }
     });
 
-    // Check Victory Condition: All 4 landmarks cleared (trigger once per run)
+    // Check Victory Condition: All landmarks cleared (trigger once per run)
     if (allCleared && this.landmarks.length > 0 && !this.hasTriggeredVictory) {
       this.hasTriggeredVictory = true;
+      if (!this.completedLevelIds.includes(this.currentLevel.id)) {
+        this.completedLevelIds.push(this.currentLevel.id);
+      }
+      const lvlIdx = LEVEL_MAPS.findIndex((l) => l.id === this.currentLevel.id);
+      const nextLvl = lvlIdx >= 0 && lvlIdx + 1 < LEVEL_MAPS.length ? LEVEL_MAPS[lvlIdx + 1] : null;
+      if (nextLvl && !this.unlockedLevelIds.includes(nextLvl.id)) {
+        this.unlockedLevelIds.push(nextLvl.id);
+      }
+      this.saveProgressState();
       this.gameState = 'VICTORY';
       this.checkAchievement('grand_savior');
       synthAudio.playLandmarkReunion();
-      this.triggerMessage('Grand Solstice Reached! The whole village is reunited in love!');
+      this.triggerMessage(
+        nextLvl
+          ? `${this.currentLevel.name} Cleared! ${nextLvl.name} is now unlocked!`
+          : `${this.currentLevel.name} Cleared! The entire solstice world shines in love!`
+      );
     }
 
     // 6. Daily Romantic Challenge Tracking (24h Rotating)
@@ -1875,6 +2088,10 @@ export class SnowPlowGameEngine {
       claimedPassTierIds: [...this.claimedPassTierIds],
       unclaimedPassRewardsCount: unclaimedCount,
       dailyChallenge: this.getDailyChallengeStatus(),
+      currentLevel: this.currentLevel,
+      unlockedLevelIds: [...this.unlockedLevelIds],
+      completedLevelIds: [...this.completedLevelIds],
+      availableQuests: this.currentLevel.quests,
     });
   }
 
@@ -1929,6 +2146,10 @@ export class SnowPlowGameEngine {
       claimedPassTierIds: [...this.claimedPassTierIds],
       unclaimedPassRewardsCount: unclaimedCount,
       dailyChallenge: this.getDailyChallengeStatus(),
+      currentLevel: this.currentLevel,
+      unlockedLevelIds: [...this.unlockedLevelIds],
+      completedLevelIds: [...this.completedLevelIds],
+      availableQuests: this.currentLevel.quests,
     };
   }
 
@@ -1989,7 +2210,7 @@ export class SnowPlowGameEngine {
       const c = this.coupleMeshes.get(l.id);
       if (c) c.visible = false;
     });
-    this.gifts = ROMANTIC_GIFTS.map((g) => ({
+    this.gifts = this.currentLevel.gifts.map((g) => ({
       ...g,
       collected: false,
       revealed: false,

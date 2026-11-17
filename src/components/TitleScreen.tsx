@@ -5,13 +5,16 @@
  */
 
 import React from 'react';
-import { Award, BookOpen, CalendarHeart, Heart, Radio, Settings, Sparkles, Volume2, VolumeX } from 'lucide-react';
+import { Award, BookOpen, CalendarHeart, Heart, Map as MapIcon, Radio, Settings, Sparkles, Volume2, VolumeX } from 'lucide-react';
 import { synthAudio } from '../audio/synthAudio';
 
 interface TitleScreenProps {
+  currentLevelNumber?: number;
+  currentLevelName?: string;
   onStart: () => void;
   isMuted: boolean;
   onToggleMute: () => void;
+  onOpenLevelSelect?: () => void;
   onOpenDispatchRadio?: () => void;
   onOpenWinterPass?: () => void;
   onOpenDailyChallenge?: () => void;
@@ -20,9 +23,12 @@ interface TitleScreenProps {
 }
 
 export const TitleScreen: React.FC<TitleScreenProps> = ({
+  currentLevelNumber = 1,
+  currentLevelName = 'Valentine Valley',
   onStart,
   isMuted,
   onToggleMute,
+  onOpenLevelSelect,
   onOpenDispatchRadio,
   onOpenWinterPass,
   onOpenDailyChallenge,
@@ -32,13 +38,22 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
   return (
     <div className="absolute inset-0 flex flex-col justify-between items-center p-8 pointer-events-auto bg-slate-950/40 select-none">
       {/* Top Bar with cozy badge and mute */}
-      <div className="w-full max-w-5xl flex items-center justify-between">
+      <div className="w-full max-w-5xl flex items-center justify-between gap-2 flex-wrap">
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-slate-900/80 border border-slate-700/60 text-xs font-medium tracking-wide text-rose-300">
           <Heart className="w-3.5 h-3.5 text-rose-400 fill-rose-400" />
-          <span>VALENTINE VALLEY · WINTER SOLSTICE</span>
+          <span>LEVEL {currentLevelNumber} · {currentLevelName.toUpperCase()}</span>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {onOpenLevelSelect && (
+            <button
+              onClick={onOpenLevelSelect}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-slate-900/80 border border-cyan-500/40 hover:bg-slate-800 text-xs text-cyan-300 transition-colors cursor-pointer"
+            >
+              <MapIcon className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Maps</span>
+            </button>
+          )}
           {onOpenDispatchRadio && (
             <button
               onClick={onOpenDispatchRadio}
@@ -184,6 +199,8 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
         <span className="font-mono text-slate-200 font-semibold">R</span> Radio
         <span className="mx-2 text-slate-600">·</span>
         <span className="font-mono text-slate-200 font-semibold">B</span> Pass
+        <span className="mx-2 text-slate-600">·</span>
+        <span className="font-mono text-slate-200 font-semibold">M</span> Maps
         <span className="mx-2 text-slate-600">·</span>
         <span className="font-mono text-slate-200 font-semibold">G</span> Atelier
         <span className="mx-2 text-slate-600">·</span>

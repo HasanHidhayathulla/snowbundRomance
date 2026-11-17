@@ -3,11 +3,12 @@
  */
 
 import React from 'react';
-import { Award, BookOpen, CalendarHeart, Camera, Play, Radio, RotateCcw, Settings, Volume2, VolumeX, Wrench } from 'lucide-react';
+import { Award, BookOpen, CalendarHeart, Camera, Map as MapIcon, Play, Radio, RotateCcw, Settings, Volume2, VolumeX, Wrench } from 'lucide-react';
 
 interface PauseModalProps {
   onResume: () => void;
   onRestart: () => void;
+  onOpenLevelSelect: () => void;
   onOpenWorkshop: () => void;
   onOpenScrapbook: () => void;
   onOpenPhotoMode: () => void;
@@ -24,6 +25,7 @@ interface PauseModalProps {
 export const PauseModal: React.FC<PauseModalProps> = ({
   onResume,
   onRestart,
+  onOpenLevelSelect,
   onOpenWorkshop,
   onOpenScrapbook,
   onOpenPhotoMode,
@@ -55,11 +57,19 @@ export const PauseModal: React.FC<PauseModalProps> = ({
           </button>
 
           <button
+            onClick={onOpenLevelSelect}
+            className="w-full py-2.5 px-4 rounded-xl bg-cyan-950/70 hover:bg-cyan-900/80 text-cyan-200 font-medium flex items-center justify-center gap-2 border border-cyan-800/60 transition-colors cursor-pointer"
+          >
+            <MapIcon className="w-4 h-4 text-cyan-400" />
+            <span>Levels &amp; Topographic Maps (M)</span>
+          </button>
+
+          <button
             onClick={onOpenWinterPass}
             className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-amber-950/70 to-yellow-950/80 hover:from-amber-900/80 hover:to-yellow-900/80 text-amber-200 font-medium flex items-center justify-center gap-2 border border-amber-800/60 transition-colors cursor-pointer"
           >
             <Award className="w-4 h-4 text-amber-400" />
-            <span>Solstice Winter Pass & Track (B)</span>
+            <span>Solstice Winter Pass &amp; Track (B)</span>
           </button>
 
           <button
